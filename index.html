@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Image to Prompt - AI Image Analysis</title>
+    <meta name="description" content="Generate optimized AI prompts from images and PDFs using OpenAI Vision API. Perfect for DALL-E, Midjourney, Stable Diffusion, Runway, and Pika Labs.">
+    <meta name="keywords" content="AI prompts, image analysis, PDF processing, DALL-E, Midjourney, Stable Diffusion, OpenAI, vision API">
+    <meta name="author" content="PDF Image to Prompt Generator">
+    <meta property="og:title" content="PDF Image to Prompt - AI Image Analysis">
+    <meta property="og:description" content="Generate optimized AI prompts from images and PDFs using OpenAI Vision API">
+    <meta property="og:type" content="website">
+    <link rel="stylesheet" href="src/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>PDF Image to Prompt</h1>
+            <p>Analisis gambar dan generate prompt AI yang optimal</p>
+        </header>
+
+        <main>
+            <!-- API Key Section -->
+            <section class="api-section">
+                <h2>OpenAI API Configuration</h2>
+                <div class="api-input-group">
+                    <input type="password" id="apiKey" placeholder="Masukkan OpenAI API Key" />
+                    <button id="validateApiKey">Validate</button>
+                </div>
+                <div id="apiStatus" class="status-message"></div>
+            </section>
+
+            <!-- Upload Section -->
+            <section class="upload-section">
+                <h2>Upload Files</h2>
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-content">
+                        <div class="upload-icon">📁</div>
+                        <p>Drag & drop gambar atau PDF di sini</p>
+                        <p class="upload-info">Mendukung JPG, PNG, WebP, PDF (maksimal 50MB)</p>
+                        <button class="upload-button">Pilih File</button>
+                        <input type="file" id="fileInput" multiple accept=".jpg,.jpeg,.png,.webp,.pdf" hidden>
+                    </div>
+                </div>
+                <div id="uploadStatus" class="status-message"></div>
+            </section>
+
+            <!-- Progress Section -->
+            <section class="progress-section" id="progressSection" style="display: none;">
+                <h2>Processing Progress</h2>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div id="progressText">0%</div>
+            </section>
+
+            <!-- Debug Console Section -->
+            <section class="debug-section" id="debugSection" style="display: none;">
+                <div class="debug-header">
+                    <h2>🔍 Debug Console</h2>
+                    <button id="debugToggle" class="debug-toggle">Hide Debug</button>
+                </div>
+                <div class="debug-console" id="debugConsole">
+                    <div class="debug-content" id="debugContent"></div>
+                </div>
+            </section>
+
+            <!-- Results Section -->
+            <section class="results-section" id="resultsSection" style="display: none;">
+                <h2>Generated Prompts</h2>
+                
+                <!-- Export Section -->
+                <div class="export-section" id="exportSection" style="display: none;">
+                    <div class="export-header">
+                        <h3>📥 Export Prompts</h3>
+                    </div>
+                    <div class="export-buttons">
+                        <button id="copyAllImagePrompts" class="export-btn">
+                            🖼️ Copy All Image Prompts
+                        </button>
+                        <button id="copyAllVideoPrompts" class="export-btn">
+                            🎬 Copy All Video Prompts
+                        </button>
+                        <button id="copyAllPrompts" class="export-btn success">
+                            📋 Copy All Prompts
+                        </button>
+                        <button id="downloadAllPrompts" class="export-btn secondary">
+                            💾 Download as Text File
+                        </button>
+                    </div>
+                    <div class="export-stats" id="exportStats">
+                        <h4>📊 Export Statistics</h4>
+                        <p id="exportStatsContent">Ready to export prompts...</p>
+                    </div>
+                </div>
+                
+                <div id="resultsContainer"></div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+        <div class="loading-container">
+            <div class="loading-spinner"></div>
+            <div class="loading-text" id="loadingText">
+                Menganalisis file<span class="loading-dots"></span>
+            </div>
+            <div class="loading-subtext" id="loadingSubtext">
+                Mohon tunggu, AI sedang memproses gambar Anda
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <script src="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+    <script src="src/js/app.js"></script>
+</body>
+</html>

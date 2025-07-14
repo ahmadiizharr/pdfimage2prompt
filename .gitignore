@@ -1,0 +1,60 @@
+# Development files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Temporary files
+*.tmp
+*.temp
+
+# Environment variables (if any are added later)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Cache directories
+.cache/
+.parcel-cache/
+
+# Build directories (for future use)
+dist/
+build/
+
+# Node modules (if npm is used later)
+node_modules/
+
+# Test files
+test-files/
+testing-images/
+sample-pdfs/
+
+# Personal/sensitive files
+private/
+personal/
+api-keys.txt
+
+# OS generated files
+.DS_Store?
+ehthumbs.db
+Icon?
+Thumbs.db
+
+# Archive files
+*.zip
+*.rar
+*.7z
+*.tar.gz
