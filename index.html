@@ -20,14 +20,116 @@
         </header>
 
         <main>
+            <!-- User Guide Section -->
+            <section class="guide-section" id="guideSection">
+                <h2>📚 Panduan Penggunaan</h2>
+                <div class="guide-content">
+                    <div class="guide-step">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <h3>Siapkan API Key</h3>
+                            <p>Pilih penyedia AI (OpenAI atau Google Gemini), lalu masukkan API key Anda. Klik tombol "Validate" untuk memverifikasi.</p>
+                            <ul>
+                                <li><strong>OpenAI:</strong> Daftar di <a href="https://openai.com" target="_blank">openai.com</a> → API Keys → Create new key</li>
+                                <li><strong>Google Gemini:</strong> Daftar di <a href="https://ai.google.dev" target="_blank">ai.google.dev</a> → Get API key</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="guide-step">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <h3>Upload File</h3>
+                            <p>Drag & drop file ke area upload atau klik untuk memilih file. Didukung:</p>
+                            <ul>
+                                <li><strong>Gambar:</strong> JPG, PNG, WebP (maks 50MB)</li>
+                                <li><strong>PDF:</strong> Otomatis extract gambar dari setiap halaman</li>
+                                <li><strong>Paste:</strong> Copy gambar dari browser lalu Ctrl+V di area paste</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="guide-step">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <h3>Proses Otomatis</h3>
+                            <p>Aplikasi akan:</p>
+                            <ul>
+                                <li>Menganalisis setiap gambar dengan AI</li>
+                                <li>Mendeteksi gambar collage/grid dan memisahkan setiap elemen</li>
+                                <li>Filter gambar tidak bermakna secara otomatis</li>
+                                <li>Generate prompt untuk Image AI dan Video AI</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="guide-step">
+                        <div class="step-number">4</div>
+                        <div class="step-content">
+                            <h3>Copy & Export Hasil</h3>
+                            <p>Setelah selesai, Anda bisa:</p>
+                            <ul>
+                                <li><strong>Copy individual:</strong> Klik tombol copy di setiap prompt</li>
+                                <li><strong>Copy semua:</strong> Export semua Image/Video prompts sekaligus</li>
+                                <li><strong>Download:</strong> Simpan semua hasil ke file .txt</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="guide-tips">
+                        <h3>💡 Tips & Trik</h3>
+                        <div class="tips-grid">
+                            <div class="tip-item">
+                                <h4>🔄 Deteksi Collage</h4>
+                                <p>Aplikasi otomatis mendeteksi gambar grid/collage dan memproses setiap elemen secara terpisah</p>
+                            </div>
+                            <div class="tip-item">
+                                <h4>💰 Hemat Biaya</h4>
+                                <p>Menggunakan GPT-4o-mini yang lebih murah. Cache otomatis mencegah analisis berulang</p>
+                            </div>
+                            <div class="tip-item">
+                                <h4>📱 Mobile Friendly</h4>
+                                <p>Aplikasi responsive, bisa digunakan di HP. Ideal untuk copy hasil ke app AI mobile</p>
+                            </div>
+                            <div class="tip-item">
+                                <h4>🎯 Quality Filter</h4>
+                                <p>AI otomatis filter gambar tidak bermakna (logo kecil, ornamen) untuk menghemat biaya</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="guide-toggle">
+                        <button id="hideGuideBtn" class="guide-btn">
+                            ⬆️ Sembunyikan Panduan
+                        </button>
+                    </div>
+                </div>
+            </section>
+
             <!-- API Key Section -->
             <section class="api-section">
-                <h2>OpenAI API Configuration</h2>
-                <div class="api-input-group">
-                    <input type="password" id="apiKey" placeholder="Masukkan OpenAI API Key" />
-                    <button id="validateApiKey">Validate</button>
+                <h2>AI API Configuration</h2>
+                <div class="api-tabs">
+                    <button class="api-tab active" data-provider="openai">OpenAI</button>
+                    <button class="api-tab" data-provider="gemini">Google Gemini</button>
                 </div>
-                <div id="apiStatus" class="status-message"></div>
+                
+                <div class="api-panel active" id="openaiPanel">
+                    <div class="api-input-group">
+                        <input type="password" id="openaiApiKey" placeholder="Masukkan OpenAI API Key" />
+                        <button id="validateOpenaiKey">Validate OpenAI</button>
+                    </div>
+                    <div id="openaiStatus" class="status-message"></div>
+                </div>
+                
+                <div class="api-panel" id="geminiPanel">
+                    <div class="api-input-group">
+                        <input type="password" id="geminiApiKey" placeholder="Masukkan Google Gemini API Key" />
+                        <button id="validateGeminiKey">Validate Gemini</button>
+                    </div>
+                    <div id="geminiStatus" class="status-message"></div>
+                    <p class="api-info">💡 Untuk mendapatkan Gemini API Key, kunjungi: <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a></p>
+                </div>
             </section>
 
             <!-- Upload Section -->
@@ -40,6 +142,15 @@
                         <p class="upload-info">Mendukung JPG, PNG, WebP, PDF (maksimal 50MB)</p>
                         <button class="upload-button">Pilih File</button>
                         <input type="file" id="fileInput" multiple accept=".jpg,.jpeg,.png,.webp,.pdf" hidden>
+                        
+                        <div class="paste-section">
+                            <div class="paste-divider">atau</div>
+                            <div class="paste-area" id="pasteArea">
+                                <div class="paste-icon">📋</div>
+                                <h4>Paste Gambar dari Clipboard</h4>
+                                <p class="paste-info">Ctrl+V untuk paste gambar yang sudah di-copy</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div id="uploadStatus" class="status-message"></div>
@@ -81,9 +192,6 @@
                         <button id="copyAllVideoPrompts" class="export-btn">
                             🎬 Copy All Video Prompts
                         </button>
-                        <button id="copyAllPrompts" class="export-btn success">
-                            📋 Copy All Prompts
-                        </button>
                         <button id="downloadAllPrompts" class="export-btn secondary">
                             💾 Download as Text File
                         </button>
@@ -110,6 +218,14 @@
                 Mohon tunggu, AI sedang memproses gambar Anda
             </div>
         </div>
+    </div>
+
+    <!-- Floating Donation Button -->
+    <div class="floating-donation" id="floatingDonation">
+        <a href="https://trakteer.id/anton-prafanto-nszpm/tip" target="_blank" class="floating-btn">
+            <span class="donation-icon">☕</span>
+            <span class="donation-text">Dukung Developer</span>
+        </a>
     </div>
 
     <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>

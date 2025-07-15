@@ -1,6 +1,8 @@
 // App State
 const AppState = {
-    apiKey: localStorage.getItem('openai_api_key') || '',
+    apiProvider: localStorage.getItem('api_provider') || 'openai',
+    openaiApiKey: localStorage.getItem('openai_api_key') || '',
+    geminiApiKey: localStorage.getItem('gemini_api_key') || '',
     isApiKeyValid: false,
     uploadedFiles: [],
     processedImages: [],
@@ -9,11 +11,16 @@ const AppState = {
 
 // DOM Elements
 const elements = {
-    apiKey: document.getElementById('apiKey'),
-    validateApiKey: document.getElementById('validateApiKey'),
-    apiStatus: document.getElementById('apiStatus'),
+    // API Elements
+    openaiApiKey: document.getElementById('openaiApiKey'),
+    geminiApiKey: document.getElementById('geminiApiKey'),
+    validateOpenaiKey: document.getElementById('validateOpenaiKey'),
+    validateGeminiKey: document.getElementById('validateGeminiKey'),
+    openaiStatus: document.getElementById('openaiStatus'),
+    geminiStatus: document.getElementById('geminiStatus'),
     uploadArea: document.getElementById('uploadArea'),
     fileInput: document.getElementById('fileInput'),
+    pasteArea: document.getElementById('pasteArea'),
     uploadStatus: document.getElementById('uploadStatus'),
     progressSection: document.getElementById('progressSection'),
     progressFill: document.getElementById('progressFill'),
@@ -31,8 +38,10 @@ const elements = {
     exportStatsContent: document.getElementById('exportStatsContent'),
     copyAllImagePrompts: document.getElementById('copyAllImagePrompts'),
     copyAllVideoPrompts: document.getElementById('copyAllVideoPrompts'),
-    copyAllPrompts: document.getElementById('copyAllPrompts'),
-    downloadAllPrompts: document.getElementById('downloadAllPrompts')
+    downloadAllPrompts: document.getElementById('downloadAllPrompts'),
+    floatingDonation: document.getElementById('floatingDonation'),
+    guideSection: document.getElementById('guideSection'),
+    hideGuideBtn: document.getElementById('hideGuideBtn')
 };
 
 // Debug Console Functions
@@ -123,13 +132,110 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function initializeApp() {
-    // Load saved API key
-    if (AppState.apiKey) {
-        elements.apiKey.value = AppState.apiKey;
-        showStatus(elements.apiStatus, 'API Key tersimpan di browser', 'info');
+    // Load saved API keys
+    if (AppState.openaiApiKey) {
+        elements.openaiApiKey.value = AppState.openaiApiKey;
+        showStatus(elements.openaiStatus, 'OpenAI API Key tersimpan di browser', 'info');
     }
     
+    if (AppState.geminiApiKey) {
+        elements.geminiApiKey.value = AppState.geminiApiKey;
+        showStatus(elements.geminiStatus, 'Gemini API Key tersimpan di browser', 'info');
+    }
+    
+    // Setup API tabs
+    setupApiTabs();
+    
     debugLog('🚀 App initialized successfully');
+    
+    // Setup floating donation button
+    setupFloatingDonation();
+}
+
+function setupApiTabs() {
+    const tabs = document.querySelectorAll('.api-tab');
+    const panels = document.querySelectorAll('.api-panel');
+    
+    tabs.forEach(tab => {
+        tab.addEventListener('click', function() {
+            const provider = this.dataset.provider;
+            
+            // Update tabs
+            tabs.forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+            
+            // Update panels
+            panels.forEach(p => p.classList.remove('active'));
+            document.getElementById(provider + 'Panel').classList.add('active');
+            
+            // Update app state
+            AppState.apiProvider = provider;
+            localStorage.setItem('api_provider', provider);
+            
+            debugLog(`🔄 Switched to ${provider} API provider`);
+        });
+    });
+    
+    // Set initial active tab based on saved preference without triggering click event
+    const activeTab = document.querySelector(`[data-provider="${AppState.apiProvider}"]`);
+    if (activeTab) {
+        // Update tabs
+        tabs.forEach(t => t.classList.remove('active'));
+        activeTab.classList.add('active');
+        
+        // Update panels
+        panels.forEach(p => p.classList.remove('active'));
+        document.getElementById(AppState.apiProvider + 'Panel').classList.add('active');
+    }
+}
+
+// Floating Donation Button
+function setupFloatingDonation() {
+    let lastScrollTop = 0;
+    let isVisible = false;
+
+    function showFloatingButton() {
+        if (!isVisible) {
+            elements.floatingDonation.classList.add('visible');
+            isVisible = true;
+        }
+    }
+
+    function hideFloatingButton() {
+        if (isVisible) {
+            elements.floatingDonation.classList.remove('visible');
+            isVisible = false;
+        }
+    }
+
+    window.addEventListener('scroll', function() {
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        
+        // Show button after scrolling down 200px
+        if (scrollTop > 200) {
+            showFloatingButton();
+        } else {
+            hideFloatingButton();
+        }
+        
+        lastScrollTop = scrollTop;
+    });
+
+    // Show button when results are visible
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+                const resultsSection = elements.resultsSection;
+                if (resultsSection.style.display !== 'none' && !isVisible) {
+                    setTimeout(showFloatingButton, 1000); // Show after 1 second when results appear
+                }
+            }
+        });
+    });
+
+    if (elements.resultsSection) {
+        observer.observe(elements.resultsSection, { attributes: true });
+    }
 }
 
 function setupDebugConsole() {
@@ -168,27 +274,39 @@ function updateLoadingText(text, subtext = null) {
 // Export Functions
 function setupExportFeatures() {
     // Copy All Image Prompts
-    elements.copyAllImagePrompts.addEventListener('click', function() {
-        copyPromptsToClipboard('image');
+    elements.copyAllImagePrompts.addEventListener('click', function(event) {
+        copyPromptsToClipboard('image', event);
     });
 
     // Copy All Video Prompts
-    elements.copyAllVideoPrompts.addEventListener('click', function() {
-        copyPromptsToClipboard('video');
+    elements.copyAllVideoPrompts.addEventListener('click', function(event) {
+        copyPromptsToClipboard('video', event);
     });
 
-    // Copy All Prompts
-    elements.copyAllPrompts.addEventListener('click', function() {
-        copyPromptsToClipboard('both');
-    });
 
     // Download All Prompts
     elements.downloadAllPrompts.addEventListener('click', function() {
         downloadPromptsAsFile();
     });
+
+    // Guide Section Toggle
+    if (elements.hideGuideBtn) {
+        elements.hideGuideBtn.addEventListener('click', function() {
+            toggleGuideSection();
+        });
+    }
+
+    // Allow clicking on collapsed guide header to expand
+    if (elements.guideSection) {
+        elements.guideSection.addEventListener('click', function(e) {
+            if (elements.guideSection.classList.contains('collapsed') && e.target.tagName === 'H2') {
+                toggleGuideSection();
+            }
+        });
+    }
 }
 
-function copyPromptsToClipboard(type) {
+function copyPromptsToClipboard(type, event) {
     if (AppState.processedImages.length === 0) {
         alert('Tidak ada prompt untuk disalin!');
         return;
@@ -198,28 +316,16 @@ function copyPromptsToClipboard(type) {
     let count = 0;
 
     AppState.processedImages.forEach((result, index) => {
-        const itemTitle = getResultTitle(result, index);
-        
         if (type === 'image' || type === 'both') {
-            content += `=== ${itemTitle} - IMAGE PROMPT ===\n`;
             content += `${result.imagePrompt}\n\n`;
             count++;
         }
 
         if (type === 'video' || type === 'both') {
-            content += `=== ${itemTitle} - VIDEO PROMPT ===\n`;
             content += `${result.videoPrompt}\n\n`;
             count++;
         }
     });
-
-    // Add summary
-    const timestamp = new Date().toLocaleString();
-    content = `PDF IMAGE TO PROMPT - EXPORTED ${type.toUpperCase()} PROMPTS\n`;
-    content += `Generated on: ${timestamp}\n`;
-    content += `Total items: ${AppState.processedImages.length}\n`;
-    content += `Total prompts: ${count}\n\n`;
-    content += `${'='.repeat(50)}\n\n${content}`;
 
     navigator.clipboard.writeText(content).then(() => {
         // Show success feedback
@@ -284,6 +390,22 @@ function downloadPromptsAsFile() {
     successLog('💾 Prompts downloaded as text file');
 }
 
+function toggleGuideSection() {
+    if (!elements.guideSection || !elements.hideGuideBtn) return;
+    
+    const isCollapsed = elements.guideSection.classList.contains('collapsed');
+    
+    if (isCollapsed) {
+        elements.guideSection.classList.remove('collapsed');
+        elements.hideGuideBtn.textContent = '⬆️ Sembunyikan Panduan';
+        successLog('📚 User guide expanded');
+    } else {
+        elements.guideSection.classList.add('collapsed');
+        elements.hideGuideBtn.textContent = '⬇️ Tampilkan Panduan';
+        successLog('📚 User guide collapsed');
+    }
+}
+
 function getResultTitle(result, index) {
     if (result.isIndividualImage) {
         if (result.pageNumber) {
@@ -312,11 +434,19 @@ function updateExportStats() {
 }
 
 function setupEventListeners() {
-    // API Key Events
-    elements.validateApiKey.addEventListener('click', validateApiKey);
-    elements.apiKey.addEventListener('keypress', function(e) {
+    // API Key Events - OpenAI
+    elements.validateOpenaiKey.addEventListener('click', () => validateApiKey('openai'));
+    elements.openaiApiKey.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
-            validateApiKey();
+            validateApiKey('openai');
+        }
+    });
+    
+    // API Key Events - Gemini
+    elements.validateGeminiKey.addEventListener('click', () => validateApiKey('gemini'));
+    elements.geminiApiKey.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            validateApiKey('gemini');
         }
     });
 
@@ -333,6 +463,23 @@ function setupEventListeners() {
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
         elements.uploadArea.addEventListener(eventName, preventDefaults);
         document.body.addEventListener(eventName, preventDefaults);
+    });
+
+    // Clipboard Events
+    elements.pasteArea.addEventListener('click', () => {
+        elements.pasteArea.focus();
+        showStatus(elements.uploadStatus, 'Area paste difokuskan. Tekan Ctrl+V untuk paste gambar', 'info');
+    });
+    
+    // Global paste event listener
+    document.addEventListener('paste', handlePaste);
+    document.addEventListener('keydown', function(e) {
+        if (e.ctrlKey && e.key === 'v') {
+            elements.pasteArea.classList.add('paste-active');
+            setTimeout(() => {
+                elements.pasteArea.classList.remove('paste-active');
+            }, 300);
+        }
     });
 }
 
@@ -360,9 +507,47 @@ function handleFileSelect(e) {
     processFiles(files);
 }
 
+function handlePaste(e) {
+    const clipboardData = e.clipboardData || window.clipboardData;
+    const items = clipboardData.items;
+
+    for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        
+        if (item.type.indexOf('image') !== -1) {
+            e.preventDefault();
+            
+            const blob = item.getAsFile();
+            const fileName = `pasted-image-${Date.now()}.${item.type.split('/')[1]}`;
+            
+            // Create a File object from the blob with a proper name
+            const file = new File([blob], fileName, { type: item.type });
+            
+            showStatus(elements.uploadStatus, `Gambar dari clipboard berhasil di-paste: ${fileName}`, 'success');
+            debugLog(`📋 Image pasted from clipboard: ${fileName} (${(blob.size / 1024 / 1024).toFixed(2)} MB)`);
+            
+            // Process the pasted image
+            processFiles([file]);
+            
+            // Visual feedback
+            elements.pasteArea.classList.add('paste-active');
+            setTimeout(() => {
+                elements.pasteArea.classList.remove('paste-active');
+            }, 1000);
+            
+            break;
+        }
+    }
+    
+    // If no image found in clipboard
+    if (!Array.from(items).some(item => item.type.indexOf('image') !== -1)) {
+        showStatus(elements.uploadStatus, 'Clipboard tidak mengandung gambar. Copy gambar terlebih dahulu dari browser lain.', 'warning');
+    }
+}
+
 function processFiles(files) {
-    if (!AppState.isApiKeyValid) {
-        showStatus(elements.uploadStatus, 'Harap validasi API Key terlebih dahulu', 'error');
+    if (!isCurrentProviderValid()) {
+        showStatus(elements.uploadStatus, `Harap validasi ${AppState.apiProvider.toUpperCase()} API Key terlebih dahulu`, 'error');
         return;
     }
 
@@ -395,42 +580,232 @@ function processFiles(files) {
     startProcessing();
 }
 
-async function validateApiKey() {
-    const apiKey = elements.apiKey.value.trim();
+async function validateApiKey(provider) {
+    const isOpenAI = provider === 'openai';
+    const apiKeyElement = isOpenAI ? elements.openaiApiKey : elements.geminiApiKey;
+    const statusElement = isOpenAI ? elements.openaiStatus : elements.geminiStatus;
+    const buttonElement = isOpenAI ? elements.validateOpenaiKey : elements.validateGeminiKey;
+    
+    const apiKey = apiKeyElement.value.trim();
     
     if (!apiKey) {
-        showStatus(elements.apiStatus, 'Harap masukkan API Key', 'error');
+        showStatus(statusElement, 'Harap masukkan API Key', 'error');
         return;
     }
 
-    elements.validateApiKey.disabled = true;
-    elements.validateApiKey.textContent = 'Validating...';
+    buttonElement.disabled = true;
+    buttonElement.textContent = 'Validating...';
     
     try {
-        const response = await fetch('https://api.openai.com/v1/models', {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${apiKey}`,
-                'Content-Type': 'application/json'
-            }
-        });
+        let response;
+        
+        if (isOpenAI) {
+            response = await fetch('https://api.openai.com/v1/models', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+        } else {
+            // Gemini API validation
+            response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+        }
 
         if (response.ok) {
-            AppState.apiKey = apiKey;
-            AppState.isApiKeyValid = true;
-            localStorage.setItem('openai_api_key', apiKey);
-            showStatus(elements.apiStatus, 'API Key valid dan tersimpan', 'success');
+            if (isOpenAI) {
+                AppState.openaiApiKey = apiKey;
+                localStorage.setItem('openai_api_key', apiKey);
+                showStatus(statusElement, 'OpenAI API Key valid! Siap untuk memproses gambar', 'success');
+                debugLog('✅ OpenAI API Key validated successfully');
+            } else {
+                AppState.geminiApiKey = apiKey;
+                localStorage.setItem('gemini_api_key', apiKey);
+                showStatus(statusElement, 'Gemini API Key valid! Siap untuk memproses gambar', 'success');
+                debugLog('✅ Gemini API Key validated successfully');
+            }
+            
+            // Update global validation state if current provider is validated
+            if (AppState.apiProvider === provider) {
+                AppState.isApiKeyValid = true;
+            }
         } else {
-            AppState.isApiKeyValid = false;
-            showStatus(elements.apiStatus, 'API Key tidak valid', 'error');
+            const errorData = await response.json();
+            throw new Error(`API validation failed: ${errorData.error?.message || errorData.error?.details || 'Unknown error'}`);
         }
     } catch (error) {
-        AppState.isApiKeyValid = false;
-        showStatus(elements.apiStatus, 'Error validasi API Key: ' + error.message, 'error');
+        console.error(`${provider} API Key validation error:`, error);
+        showStatus(statusElement, `Validation gagal: ${error.message}`, 'error');
+        
+        if (AppState.apiProvider === provider) {
+            AppState.isApiKeyValid = false;
+        }
     } finally {
-        elements.validateApiKey.disabled = false;
-        elements.validateApiKey.textContent = 'Validate';
+        buttonElement.disabled = false;
+        buttonElement.textContent = isOpenAI ? 'Validate OpenAI' : 'Validate Gemini';
     }
+}
+
+// Helper function to get current API key
+function getCurrentApiKey() {
+    return AppState.apiProvider === 'openai' ? AppState.openaiApiKey : AppState.geminiApiKey;
+}
+
+// Helper function to check if current provider is validated
+function isCurrentProviderValid() {
+    const apiKey = getCurrentApiKey();
+    return apiKey && apiKey.length > 0;
+}
+
+// Generic API call function that supports both OpenAI and Gemini
+async function callVisionAPI(imageData, promptText, maxTokens = 1000) {
+    const apiKey = getCurrentApiKey();
+    
+    if (AppState.apiProvider === 'openai') {
+        return await callOpenAIAPI(imageData, promptText, maxTokens, apiKey);
+    } else {
+        return await callGeminiAPI(imageData, promptText, maxTokens, apiKey);
+    }
+}
+
+// OpenAI API call
+async function callOpenAIAPI(imageData, promptText, maxTokens, apiKey) {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            model: "gpt-4o-mini",
+            messages: [{
+                role: "user",
+                content: [
+                    { type: "text", text: promptText },
+                    { type: "image_url", image_url: { url: imageData } }
+                ]
+            }],
+            max_tokens: maxTokens
+        })
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`OpenAI API Error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+    }
+
+    const data = await response.json();
+    return data.choices[0].message.content;
+}
+
+// Gemini API call
+async function callGeminiAPI(imageData, promptText, maxTokens, apiKey) {
+    // Convert data URL to base64 without the data:image/jpeg;base64, prefix
+    const base64Data = imageData.split(',')[1];
+    const mimeType = imageData.split(';')[0].split(':')[1];
+
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            contents: [{
+                parts: [
+                    { text: promptText },
+                    {
+                        inline_data: {
+                            mime_type: mimeType,
+                            data: base64Data
+                        }
+                    }
+                ]
+            }],
+            generationConfig: {
+                maxOutputTokens: maxTokens,
+                temperature: 0.7
+            }
+        })
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`Gemini API Error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+    }
+
+    const data = await response.json();
+    return data.candidates[0].content.parts[0].text;
+}
+
+// Generic text-only API call function that supports both OpenAI and Gemini
+async function callTextAPI(promptText, maxTokens = 1000, temperature = 0.7) {
+    const apiKey = getCurrentApiKey();
+    
+    if (AppState.apiProvider === 'openai') {
+        return await callOpenAITextAPI(promptText, maxTokens, temperature, apiKey);
+    } else {
+        return await callGeminiTextAPI(promptText, maxTokens, temperature, apiKey);
+    }
+}
+
+// OpenAI text-only API call
+async function callOpenAITextAPI(promptText, maxTokens, temperature, apiKey) {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            model: "gpt-4o-mini",
+            messages: [{
+                role: "user",
+                content: promptText
+            }],
+            max_tokens: maxTokens,
+            temperature: temperature
+        })
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`OpenAI API Error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+    }
+
+    const data = await response.json();
+    return data.choices[0].message.content;
+}
+
+// Gemini text-only API call
+async function callGeminiTextAPI(promptText, maxTokens, temperature, apiKey) {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            contents: [{
+                parts: [{ text: promptText }]
+            }],
+            generationConfig: {
+                maxOutputTokens: maxTokens,
+                temperature: temperature
+            }
+        })
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`Gemini API Error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+    }
+
+    const data = await response.json();
+    return data.candidates[0].content.parts[0].text;
 }
 
 async function startProcessing() {
@@ -544,9 +919,14 @@ async function processFilesWithOpenAI() {
                     results.push(...individualImages);
                 } else {
                     // Single image or detection failed - process as single image
+                    debugLog(`🖼️ Processing single image: ${file.name}`);
                     const imageResult = await processImageFile(file);
+                    debugLog(`📊 Single image result:`, imageResult);
                     if (imageResult) {
                         results.push(imageResult);
+                        successLog(`✅ Single image processed: ${file.name}`);
+                    } else {
+                        debugLog(`❌ No result returned for single image: ${file.name}`);
                     }
                     updateDetailedProgress(1, `Selesai memproses ${file.name}`);
                 }
@@ -567,84 +947,64 @@ async function detectIndividualImagesInFile(file) {
     try {
         debugLog(`🔍 Attempting individual image detection for: ${file.name}`);
         
-        // Convert file to base64 for OpenAI analysis
+        // Convert file to base64 for analysis
         const base64Image = await convertFileToBase64(file);
+        const imageDataUrl = `data:${file.type};base64,${base64Image}`;
         
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${AppState.apiKey}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                model: "gpt-4o",
-                messages: [
-                    {
-                        role: "user",
-                        content: [
-                            {
-                                type: "text",
-                                text: `Analyze this image and determine if it contains multiple individual images, photos, or visual elements that could be processed separately.
+        const promptText = `ULTRA-COMPREHENSIVE COMPOSITE IMAGE DETECTION:
 
-IDENTIFY IF THIS IS A COMPOSITE IMAGE CONTAINING:
-- Multiple distinct photos or images arranged in a grid or collage
-- Separate visual elements that could each be recreated individually
-- Different scenes, objects, or subjects that are clearly distinct
-- Gallery-style layouts with multiple images
+MISSION: Identify and analyze EVERY individual image, photo, or visual element in this collage/grid layout. Count each separate visual piece meticulously.
 
-IMPORTANT CRITERIA:
-1) Only return multiple elements if they are truly SEPARATE and DISTINCT images
-2) Do NOT split single images into parts (e.g., don't separate a person's face from their body)
-3) Do NOT treat single scenes with multiple objects as separate images
-4) DO identify actual separate photos arranged together (like a photo collage)
-5) Each element should be recreatable as an independent image
+🎯 DETECTION TARGETS (Be EXTREMELY thorough):
+✅ PHOTOGRAPHS: Every individual photo, no matter how small
+✅ ARTWORK: Any illustration, drawing, or artistic piece  
+✅ SCREENSHOTS: App interfaces, website captures, UI elements
+✅ PRODUCT IMAGES: Items, objects, or commercial photos
+✅ PORTRAITS: People photos, headshots, character images
+✅ LANDSCAPES: Nature scenes, cityscapes, architectural photos
+✅ ABSTRACT VISUALS: Patterns, textures, color compositions
+✅ DESIGN ELEMENTS: Logos, graphics, decorative images
+✅ THUMBNAILS: Even small preview images count as separate items
 
-For each distinct individual image/element you identify, provide:
-1) A detailed description of what you see in that specific image
-2) A comprehensive AI image generation prompt for DALL-E, Midjourney, or Stable Diffusion
-3) A detailed AI video generation prompt for Runway or Pika Labs
-4) Mark isMeaningful as true for substantial visual content
+ULTRA-SENSITIVE COUNTING:
+- Look at EVERY corner and section of the image
+- Count even tiny individual elements if they're distinct images
+- If you see a grid of 4x5 photos, that's 20 individual images
+- Each separate visual piece = +1 to the count
+- Be generous with detection - err on the side of finding MORE images
 
-If this appears to be a SINGLE image (even with multiple objects), return only 1 element.
-If this is clearly a COMPOSITE with multiple distinct images, return multiple elements.
+ANALYSIS DEPTH for EACH detected image:
+1) ULTRA-DETAILED description: Every visual element, color, style, mood, composition, lighting, objects, people, setting, atmosphere, artistic style
+2) MASTER-LEVEL image prompt: Hyper-specific details for perfect AI recreation including camera settings, lighting setup, artistic style, materials, textures, colors, composition rules, mood, technical specifications
+3) CINEMATIC video prompt: Professional camera movements, lighting transitions, motion dynamics, cinematic techniques, storytelling approach
+4) Mark isMeaningful=true for ANY visual content with substance
 
-CRITICAL: Return ONLY valid JSON without any markdown formatting, explanations, or code blocks.
+CRITICAL SUCCESS METRICS:
+- If this is a collage with ~20 images, detect close to 20 individual pieces
+- Each analysis should be as thorough as if that image was uploaded alone
+- Zero tolerance for missing individual images in grids/collages
 
-Return your response as JSON with this structure:
+RETURN ONLY valid JSON without markdown formatting.
+
+IMPORTANT: Set isComposite=true if you detect 2 or more separate visual elements.
+
+JSON Structure:
 {
     "totalImages": number,
     "isComposite": boolean,
-    "debugInfo": "Brief explanation of what you found",
+    "debugInfo": "Brief explanation of what type of image this is and how many distinct images found",
     "images": [
         {
             "index": number,
-            "description": "detailed description",
-            "imagePrompt": "detailed image generation prompt",
+            "description": "very detailed description",
+            "imagePrompt": "comprehensive image generation prompt",
             "videoPrompt": "detailed video generation prompt",
             "isMeaningful": boolean
         }
     ]
-}`
-                            },
-                            {
-                                type: "image_url",
-                                image_url: {
-                                    url: `data:${file.type};base64,${base64Image}`
-                                }
-                            }
-                        ]
-                    }
-                ],
-                max_tokens: 4000
-            })
-        });
+}`;
 
-        if (!response.ok) {
-            throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        const content = data.choices[0].message.content;
+        const content = await callVisionAPI(imageDataUrl, promptText, 6000);
         
         try {
             const cleanContent = cleanJsonResponse(content);
@@ -656,11 +1016,25 @@ Return your response as JSON with this structure:
                 debugInfo: analysis.debugInfo
             });
 
-            // Only proceed if it's identified as a composite with multiple meaningful images
-            if (!analysis.isComposite || !analysis.images || analysis.images.length <= 1) {
-                debugLog(`ℹ️ Not a composite image - processing as single image`);
+            // Enhanced composite detection logic - be more inclusive
+            const meaningfulCount = analysis.images ? analysis.images.filter(img => img.isMeaningful).length : 0;
+            
+            // Process as composite if:
+            // 1) Explicitly marked as composite, OR
+            // 2) Multiple meaningful images detected (≥2), OR  
+            // 3) High total image count (≥3) regardless of isComposite flag
+            const shouldProcessAsComposite = (
+                analysis.isComposite || 
+                meaningfulCount >= 2 || 
+                (analysis.totalImages && analysis.totalImages >= 3)
+            );
+            
+            if (!shouldProcessAsComposite || !analysis.images || analysis.images.length === 0) {
+                debugLog(`ℹ️ Not detected as composite - isComposite: ${analysis.isComposite}, meaningful: ${meaningfulCount}, total: ${analysis.totalImages}`);
                 return null;
             }
+            
+            debugLog(`🎯 Processing as composite - meaningful: ${meaningfulCount}, total: ${analysis.totalImages}, isComposite: ${analysis.isComposite}`);
 
             const results = [];
             const meaningfulImages = analysis.images.filter(img => img.isMeaningful);
@@ -709,49 +1083,25 @@ async function processImageFile(file) {
     
     const base64Image = await convertFileToBase64(file);
     
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${AppState.apiKey}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            model: "gpt-4o",
-            messages: [
-                {
-                    role: "user",
-                    content: [
-                        {
-                            type: "text",
-                            text: "Analyze this image in detail and create specific prompts for recreating it. Please provide:\n\n1) A comprehensive description of what you see (objects, people, colors, composition, style, mood, lighting, etc.)\n2) A detailed AI image generation prompt optimized for DALL-E, Midjourney, or Stable Diffusion that would recreate this exact image\n3) A detailed AI video generation prompt optimized for Runway or Pika Labs that would create a video based on this image\n4) Determine if this is a meaningful image (not just icons, thumbnails, or insignificant graphics)\n\nIMPORTANT: Make the prompts very specific and detailed. Include art style, colors, composition, lighting, mood, and specific visual elements. The prompts should be comprehensive enough to recreate the image accurately.\n\nCRITICAL: Return ONLY valid JSON without any markdown formatting, explanations, or code blocks. Do not use backticks or code markers.\n\nFormat your response as JSON with keys: description, imagePrompt, videoPrompt, isMeaningful"
-                        },
-                        {
-                            type: "image_url",
-                            image_url: {
-                                url: `data:${file.type};base64,${base64Image}`
-                            }
-                        }
-                    ]
-                }
-            ],
-            max_tokens: 1000
-        })
-    });
-
-    if (!response.ok) {
-        throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    const content = data.choices[0].message.content;
+    const promptText = "Analyze this image thoroughly and create detailed prompts for AI generation. Treat ALL images as potentially meaningful - including photographs, screenshots, UI interfaces, artwork, designs, and visual content.\n\nPlease provide:\n1) A comprehensive description of what you see (objects, people, interface elements, colors, composition, style, mood, lighting, etc.)\n2) A detailed AI image generation prompt optimized for DALL-E, Midjourney, or Stable Diffusion that captures the essence and visual elements\n3) A detailed AI video generation prompt for Runway or Pika Labs that could animate or create motion from this image\n4) Mark as meaningful unless it's purely decorative icons or basic geometric shapes\n\nFOR SCREENSHOTS/UI: Describe the interface layout, colors, design elements, and create prompts that capture the visual design.\nFOR PHOTOS: Focus on subjects, composition, lighting, mood, and setting.\nFOR GRAPHICS/ARTWORK: Describe style, colors, elements, and artistic approach.\n\nIMPORTANT: Be very descriptive and specific in prompts. Include visual details, colors, composition, style, and mood.\n\nCRITICAL: Return ONLY valid JSON without markdown formatting. Use this exact structure:\n{\"description\": \"detailed description\", \"imagePrompt\": \"comprehensive prompt\", \"videoPrompt\": \"detailed video prompt\", \"isMeaningful\": true/false}";
+    
+    const imageDataUrl = `data:${file.type};base64,${base64Image}`;
+    const content = await callVisionAPI(imageDataUrl, promptText, 1000);
     
     try {
         const cleanContent = cleanJsonResponse(content);
         const result = JSON.parse(cleanContent);
+        debugLog(`🔍 ${AppState.apiProvider.toUpperCase()} response received for ${file.name}`);
         
-        // Filter out non-meaningful images
-        if (!result.isMeaningful) {
+        // More lenient filtering for single images - only filter truly empty or very short descriptions
+        if (!result.description || result.description.trim().length < 10) {
+            debugLog(`❌ Filtered out image with insufficient description: ${result.description || 'null'}`);
             return null;
+        }
+        
+        // Accept image even if marked as not meaningful, as long as it has substantial description
+        if (!result.isMeaningful) {
+            debugLog(`⚠️ Image marked as not meaningful but has description, processing anyway: ${file.name}`);
         }
         
         const processedResult = {
@@ -827,7 +1177,7 @@ async function processPDFFile(file) {
                     } else {
                         // Fallback: Process entire page as single image
                         updateDetailedProgress(stepsPerPage * 0.2, `Memproses halaman ${pageNum} sebagai satu gambar...`);
-                        const result = await processImageWithOpenAI(imageFile, pageNum);
+                        const result = await processImageWithAPI(imageFile, pageNum);
                         if (result) {
                             results.push(result);
                         }
@@ -850,7 +1200,7 @@ async function processPDFFile(file) {
     }
 }
 
-async function processImageWithOpenAI(imageFile, pageNum) {
+async function processImageWithAPI(imageFile, pageNum) {
     try {
         // Check cache first
         const cacheKey = await generateCacheKey(imageFile);
@@ -863,21 +1213,7 @@ async function processImageWithOpenAI(imageFile, pageNum) {
         
         const base64Image = await convertFileToBase64(imageFile);
         
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${AppState.apiKey}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                model: "gpt-4o",
-                messages: [
-                    {
-                        role: "user",
-                        content: [
-                            {
-                                type: "text",
-                                text: `Analyze this page from a PDF document in detail. Please provide:
+        const promptText = `Analyze this page from a PDF document in detail. Please provide:
 
 1) A comprehensive description of what you see (text content, images, diagrams, tables, layouts, visual elements, etc.)
 2) A detailed AI image generation prompt optimized for DALL-E, Midjourney, or Stable Diffusion that would recreate this exact page/visual content
@@ -899,27 +1235,10 @@ For the video prompt, describe:
 
 CRITICAL: Return ONLY valid JSON without any markdown formatting, explanations, or code blocks. Do not use backticks or code markers.
 
-Format your response as JSON with keys: description, imagePrompt, videoPrompt, isMeaningful`
-                            },
-                            {
-                                type: "image_url",
-                                image_url: {
-                                    url: `data:${imageFile.type};base64,${base64Image}`
-                                }
-                            }
-                        ]
-                    }
-                ],
-                max_tokens: 1200
-            })
-        });
+Format your response as JSON with keys: description, imagePrompt, videoPrompt, isMeaningful`;
 
-        if (!response.ok) {
-            throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        const content = data.choices[0].message.content;
+        const imageDataUrl = `data:${imageFile.type};base64,${base64Image}`;
+        const content = await callVisionAPI(imageDataUrl, promptText, 1200);
         
         try {
             const cleanContent = cleanJsonResponse(content);
@@ -1012,88 +1331,71 @@ function cleanJsonResponse(content) {
 
 async function detectAndProcessIndividualImages(pageImageFile, pageNum) {
     try {
-        // First, ask OpenAI to analyze the page and identify individual images
+        // First, analyze the page and identify individual images
         const base64Image = await convertFileToBase64(pageImageFile);
+        const imageDataUrl = `data:${pageImageFile.type};base64,${base64Image}`;
         
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${AppState.apiKey}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                model: "gpt-4o",
-                messages: [
-                    {
-                        role: "user",
-                        content: [
-                            {
-                                type: "text",
-                                text: `Analyze this PDF page and identify ALL visual content that could be recreated with AI. Be comprehensive for stock photos, thumbnails, and artistic content.
+        const promptText = `ULTRA-THOROUGH PDF VISUAL CONTENT EXTRACTION:
 
-IDENTIFY ALL THESE TYPES OF VISUAL CONTENT:
-- Photos and illustrations (including thumbnails and previews)
-- Stock photos and professional photography
-- Artwork, designs, and creative visuals
-- Charts, graphs, diagrams, and data visualizations
-- Screenshots and interface elements
-- Logos, graphics, and visual designs
-- Infographics and text-with-visual layouts
-- Drawings, sketches, and artistic elements
-- Any visual content with shape, color, or design
-- Thumbnails, previews, and image galleries
-- Colorful backgrounds and visual patterns
+MISSION: Scan every millimeter of this PDF page and catalog EVERY individual visual element. Miss nothing - be obsessively thorough.
 
-IMPORTANT INSTRUCTIONS:
-1) Include ALL photos, illustrations, and stock images regardless of size
-2) Include thumbnails, previews, and gallery images
-3) Include artistic elements, designs, and visual patterns
-4) ONLY exclude obvious navigation elements (page numbers, tiny dots, separators)
-5) Mark isMeaningful as true for ANY visual content that has artistic or photographic value
-6) Be especially inclusive for stock photo collections and image galleries
+🔍 HYPER-DETECTION CATEGORIES:
+📸 PHOTOGRAPHS (Count each separately):
+- Every individual photo, portrait, landscape shot
+- Stock photography and commercial images
+- Product photos and item pictures  
+- Thumbnail images and preview pictures
+- Screenshots and interface captures
+- Personal photos and professional headshots
 
-For each visual element you identify, provide:
-1) A detailed description of what you see
-2) A comprehensive AI image generation prompt for DALL-E, Midjourney, or Stable Diffusion
-3) A detailed AI video generation prompt for Runway or Pika Labs
-4) Mark isMeaningful as true for visual content, false only for pure text or navigation elements
+🎨 ARTISTIC CONTENT (Each piece counts):
+- Individual illustrations and artwork pieces
+- Graphics, logos, and brand visuals
+- Decorative elements and design graphics
+- Charts, infographics, and data visualizations
+- Color patterns and textural backgrounds
+- Icons and visual symbols
 
-CRITICAL: Return ONLY valid JSON without any markdown formatting, explanations, or code blocks. Do not use backticks or code markers.
+📱 DIGITAL VISUALS (Every element):
+- App interface screenshots
+- Website layout captures
+- Digital artwork and computer graphics
+- UI elements and design mockups
 
-Return your response as JSON with this structure:
+🎯 ULTRA-DETECTION PROTOCOL:
+✅ COUNT SEPARATELY: Every distinct visual piece, even if tiny
+✅ INCLUDE ALL: Photos, graphics, artwork, designs, meaningful patterns
+✅ SCAN SYSTEMATICALLY: Top-left to bottom-right, corner to corner
+✅ BE GENEROUS: When in doubt, count it as a separate element
+✅ MARK MEANINGFUL: ANY visual content with artistic/photographic value
+❌ EXCLUDE ONLY: Pure text, page numbers, tiny decorative dots
+
+ANALYSIS REQUIREMENTS for EACH visual element:
+1) EXHAUSTIVE description: Every detail - objects, people, colors, lighting, style, mood, composition, setting, atmosphere, artistic approach
+2) MASTER-CLASS image prompt: Ultra-specific recreation details including camera settings, lighting setup, artistic style, materials, textures, color grading, composition techniques, technical specifications
+3) PROFESSIONAL video prompt: Cinematic camera work, lighting transitions, motion dynamics, storytelling approach, technical cinematography
+4) Mark isMeaningful=true for ANY substantial visual content
+
+DETECTION SUCCESS TARGET: If there are 20+ visual elements visible, detect close to that number.
+
+RETURN ONLY valid JSON without markdown formatting.
+
+JSON Structure:
 {
     "totalImages": number,
-    "debugInfo": "Brief explanation of what types of elements were found",
+    "debugInfo": "Explanation of visual content found",
     "images": [
         {
             "index": number,
             "description": "detailed description",
-            "imagePrompt": "detailed image generation prompt",
-            "videoPrompt": "detailed video generation prompt",
+            "imagePrompt": "comprehensive prompt",
+            "videoPrompt": "detailed video prompt",
             "isMeaningful": boolean
         }
     ]
-}`
-                            },
-                            {
-                                type: "image_url",
-                                image_url: {
-                                    url: `data:${pageImageFile.type};base64,${base64Image}`
-                                }
-                            }
-                        ]
-                    }
-                ],
-                max_tokens: 4000
-            })
-        });
+}`;
 
-        if (!response.ok) {
-            throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        const content = data.choices[0].message.content;
+        const content = await callVisionAPI(imageDataUrl, promptText, 6000);
         
         try {
             const cleanContent = cleanJsonResponse(content);
@@ -1398,6 +1700,7 @@ function copyToClipboard(text, button) {
         console.error('Failed to copy: ', err);
     });
 }
+
 
 function showStatus(element, message, type) {
     element.textContent = message;

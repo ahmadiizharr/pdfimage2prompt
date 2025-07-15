@@ -55,6 +55,58 @@ section h2 {
 }
 
 /* API Section */
+.api-tabs {
+    display: flex;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.api-tab {
+    padding: 12px 24px;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 500;
+    color: #7f8c8d;
+    transition: all 0.3s ease;
+}
+
+.api-tab:hover {
+    color: #3498db;
+    background: #f8f9fa;
+}
+
+.api-tab.active {
+    color: #3498db;
+    border-bottom-color: #3498db;
+    background: #f8f9fa;
+}
+
+.api-panel {
+    display: none;
+}
+
+.api-panel.active {
+    display: block;
+}
+
+.api-info {
+    font-size: 0.9em;
+    color: #7f8c8d;
+    margin-top: 10px;
+}
+
+.api-info a {
+    color: #3498db;
+    text-decoration: none;
+}
+
+.api-info a:hover {
+    text-decoration: underline;
+}
+
 .api-input-group {
     display: flex;
     gap: 10px;
@@ -142,6 +194,70 @@ section h2 {
 
 .upload-button:hover {
     background: #219a52;
+}
+
+/* Paste Section */
+.paste-section {
+    margin-top: 30px;
+}
+
+.paste-divider {
+    text-align: center;
+    color: #7f8c8d;
+    font-weight: 500;
+    margin-bottom: 20px;
+    position: relative;
+}
+
+.paste-divider::before,
+.paste-divider::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 40%;
+    height: 1px;
+    background: #ddd;
+}
+
+.paste-divider::before {
+    left: 0;
+}
+
+.paste-divider::after {
+    right: 0;
+}
+
+.paste-area {
+    border: 2px dashed #95a5a6;
+    border-radius: 8px;
+    padding: 30px 20px;
+    text-align: center;
+    background: #f7f7f7;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.paste-area:hover,
+.paste-area.paste-active {
+    border-color: #e67e22;
+    background: #fef5e7;
+}
+
+.paste-icon {
+    font-size: 2.5em;
+    margin-bottom: 15px;
+}
+
+.paste-area h4 {
+    margin: 0 0 10px 0;
+    color: #2c3e50;
+    font-size: 1.1em;
+}
+
+.paste-info {
+    color: #7f8c8d !important;
+    font-size: 0.9em !important;
+    margin: 0;
 }
 
 /* Progress Section */
@@ -306,11 +422,13 @@ section h2 {
     font-size: 14px;
     margin-top: 10px;
     transition: background-color 0.3s;
+    display: inline-block;
 }
 
 .copy-button:hover {
     background: #c0392b;
 }
+
 
 /* Responsive Design */
 @media (max-width: 768px) {
@@ -597,6 +715,250 @@ section h2 {
 }
 
 /* Responsive Export Buttons */
+/* Floating Donation Button */
+.floating-donation {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.3s ease;
+}
+
+.floating-donation.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.floating-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 20px;
+    background: linear-gradient(135deg, #ff6b35, #ff8e53);
+    color: white;
+    border: none;
+    border-radius: 50px;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 20px rgba(255, 107, 53, 0.4);
+    position: relative;
+    overflow: hidden;
+    min-width: 160px;
+}
+
+.floating-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(255, 107, 53, 0.5);
+    background: linear-gradient(135deg, #ff5722, #ff7043);
+}
+
+.floating-btn:active {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(255, 107, 53, 0.4);
+}
+
+.donation-icon {
+    font-size: 18px;
+    animation: bounce 2s infinite;
+}
+
+.donation-text {
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% {
+        transform: translateY(0);
+    }
+    40% {
+        transform: translateY(-5px);
+    }
+    60% {
+        transform: translateY(-3px);
+    }
+}
+
+/* Floating button shimmer effect */
+.floating-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transition: left 0.6s;
+}
+
+.floating-btn:hover::before {
+    left: 100%;
+}
+
+/* User Guide Section Styles */
+.guide-section {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    margin-bottom: 30px;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.guide-section h2 {
+    color: white;
+    text-align: center;
+    padding: 20px 0 10px 0;
+    margin: 0;
+    font-size: 1.8em;
+}
+
+.guide-content {
+    padding: 0 30px 30px 30px;
+}
+
+.guide-step {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 25px;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    backdrop-filter: blur(10px);
+}
+
+.step-number {
+    background: #fff;
+    color: #667eea;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 18px;
+    margin-right: 20px;
+    flex-shrink: 0;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.step-content h3 {
+    margin: 0 0 10px 0;
+    color: #fff;
+    font-size: 1.3em;
+}
+
+.step-content p {
+    margin: 0 0 10px 0;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.step-content ul {
+    margin: 10px 0;
+    padding-left: 20px;
+}
+
+.step-content li {
+    margin: 8px 0;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.step-content a {
+    color: #ffd700;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.step-content a:hover {
+    text-decoration: underline;
+    color: #fff;
+}
+
+.guide-tips {
+    margin-top: 30px;
+}
+
+.guide-tips h3 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #fff;
+    font-size: 1.4em;
+}
+
+.tips-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.tip-item {
+    background: rgba(255, 255, 255, 0.15);
+    padding: 20px;
+    border-radius: 10px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.tip-item h4 {
+    margin: 0 0 8px 0;
+    color: #ffd700;
+    font-size: 1.1em;
+}
+
+.tip-item p {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.95em;
+    line-height: 1.5;
+}
+
+.guide-toggle {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.guide-btn {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    padding: 12px 24px;
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+.guide-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(-2px);
+}
+
+.guide-section.collapsed .guide-content {
+    display: none;
+}
+
+.guide-section.collapsed h2 {
+    cursor: pointer;
+    padding: 20px;
+}
+
+.guide-section.collapsed h2::after {
+    content: " (Klik untuk lihat panduan)";
+    font-size: 0.6em;
+    opacity: 0.8;
+}
+
 @media (max-width: 768px) {
     .export-buttons {
         flex-direction: column;
@@ -605,5 +967,33 @@ section h2 {
     .export-btn {
         width: 100%;
         justify-content: center;
+    }
+    
+    .floating-donation {
+        bottom: 15px;
+        right: 15px;
+    }
+    
+    .floating-btn {
+        min-width: 140px;
+        padding: 10px 16px;
+        font-size: 13px;
+    }
+    
+    .guide-content {
+        padding: 0 20px 20px 20px;
+    }
+    
+    .guide-step {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .step-number {
+        margin: 0 auto 15px auto;
+    }
+    
+    .tips-grid {
+        grid-template-columns: 1fr;
     }
 }
