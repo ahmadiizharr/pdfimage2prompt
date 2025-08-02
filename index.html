@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Image to Prompt - AI Image Analysis</title>
+    <meta name="description" content="Generate optimized AI prompts from images and PDFs using OpenAI Vision API. Perfect for DALL-E, Midjourney, Stable Diffusion, Runway, and Pika Labs.">
+    <meta name="keywords" content="AI prompts, image analysis, PDF processing, DALL-E, Midjourney, Stable Diffusion, OpenAI, vision API">
+    <meta name="author" content="PDF Image to Prompt Generator">
+    <meta property="og:title" content="PDF Image to Prompt - AI Image Analysis">
+    <meta property="og:description" content="Generate optimized AI prompts from images and PDFs using OpenAI Vision API">
+    <meta property="og:type" content="website">
+    <link rel="stylesheet" href="src/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>PDF Image to Prompt</h1>
+            <p>Analisis gambar dan generate prompt AI yang optimal</p>
+        </header>
+
+        <main>
+            <!-- User Guide Section -->
+            <section class="guide-section" id="guideSection">
+                <h2>📚 Panduan Penggunaan</h2>
+                <div class="guide-content">
+                    <div class="guide-step">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <h3>Siapkan API Key</h3>
+                            <p>Pilih penyedia AI (OpenAI atau Google Gemini), lalu masukkan API key Anda. Klik tombol "Validate" untuk memverifikasi.</p>
+                            <ul>
+                                <li><strong>OpenAI:</strong> Daftar di <a href="https://openai.com" target="_blank">openai.com</a> → API Keys → Create new key</li>
+                                <li><strong>Google Gemini:</strong> Daftar di <a href="https://ai.google.dev" target="_blank">ai.google.dev</a> → Get API key</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="guide-step">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <h3>Upload File</h3>
+                            <p>Drag & drop file ke area upload atau klik untuk memilih file. Didukung:</p>
+                            <ul>
+                                <li><strong>Gambar:</strong> JPG, PNG, WebP (maks 50MB)</li>
+                                <li><strong>PDF:</strong> Otomatis extract gambar dari setiap halaman</li>
+                                <li><strong>Paste:</strong> Copy gambar dari browser lalu Ctrl+V di area paste</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="guide-step">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <h3>Proses Otomatis</h3>
+                            <p>Aplikasi akan:</p>
+                            <ul>
+                                <li>Menganalisis setiap gambar dengan AI</li>
+                                <li>Mendeteksi gambar collage/grid dan memisahkan setiap elemen</li>
+                                <li>Filter gambar tidak bermakna secara otomatis</li>
+                                <li>Generate prompt untuk Image AI dan Video AI</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="guide-step">
+                        <div class="step-number">4</div>
+                        <div class="step-content">
+                            <h3>Copy & Export Hasil</h3>
+                            <p>Setelah selesai, Anda bisa:</p>
+                            <ul>
+                                <li><strong>Copy individual:</strong> Klik tombol copy di setiap prompt</li>
+                                <li><strong>Copy semua:</strong> Export semua Image/Video prompts sekaligus</li>
+                                <li><strong>Download:</strong> Simpan semua hasil ke file .txt</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="guide-tips">
+                        <h3>💡 Tips & Trik</h3>
+                        <div class="tips-grid">
+                            <div class="tip-item">
+                                <h4>🔄 Deteksi Collage</h4>
+                                <p>Aplikasi otomatis mendeteksi gambar grid/collage dan memproses setiap elemen secara terpisah</p>
+                            </div>
+                            <div class="tip-item">
+                                <h4>💰 Hemat Biaya</h4>
+                                <p>Menggunakan GPT-4o-mini yang lebih murah. Cache otomatis mencegah analisis berulang</p>
+                            </div>
+                            <div class="tip-item">
+                                <h4>📱 Mobile Friendly</h4>
+                                <p>Aplikasi responsive, bisa digunakan di HP. Ideal untuk copy hasil ke app AI mobile</p>
+                            </div>
+                            <div class="tip-item">
+                                <h4>🎯 Quality Filter</h4>
+                                <p>AI otomatis filter gambar tidak bermakna (logo kecil, ornamen) untuk menghemat biaya</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="guide-toggle">
+                        <button id="hideGuideBtn" class="guide-btn">
+                            ⬆️ Sembunyikan Panduan
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- API Key Section -->
+            <section class="api-section">
+                <h2>AI API Configuration</h2>
+                <div class="api-tabs">
+                    <button class="api-tab active" data-provider="openai">OpenAI</button>
+                    <button class="api-tab" data-provider="gemini">Google Gemini</button>
+                    <button class="api-tab" data-provider="openrouter">OpenRouter</button>
+                </div>
+                
+                <div class="api-panel active" id="openaiPanel">
+                    <div class="api-input-group">
+                        <input type="password" id="openaiApiKey" placeholder="Masukkan OpenAI API Key" />
+                        <button id="validateOpenaiKey">Validate OpenAI</button>
+                    </div>
+                    <div id="openaiStatus" class="status-message"></div>
+                </div>
+                
+                <div class="api-panel" id="geminiPanel">
+                    <div class="api-input-group">
+                        <input type="password" id="geminiApiKey" placeholder="Masukkan Google Gemini API Key" />
+                        <button id="validateGeminiKey">Validate Gemini</button>
+                    </div>
+                    <div id="geminiStatus" class="status-message"></div>
+                    <p class="api-info">💡 Untuk mendapatkan Gemini API Key, kunjungi: <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a></p>
+                </div>
+                
+                <div class="api-panel" id="openrouterPanel">
+                    <div class="api-input-group">
+                        <input type="password" id="openrouterApiKey" placeholder="Masukkan OpenRouter API Key" />
+                        <button id="validateOpenrouterKey">Validate OpenRouter</button>
+                    </div>
+                    <div id="openrouterStatus" class="status-message"></div>
+                    <p class="api-info">💡 Untuk mendapatkan OpenRouter API Key, kunjungi: <a href="https://openrouter.ai/keys" target="_blank">OpenRouter API Keys</a></p>
+                    <div class="model-selector">
+                        <label for="openrouterModel">Model:</label>
+                        <select id="openrouterModel">
+                            <option value="google/gemini-flash-1.5">Gemini Flash 1.5 (Recommended)</option>
+                            <option value="google/gemini-2.5-flash">Gemini 2.5 Flash</option>
+                            <option value="google/gemini-2.0-flash-001">Gemini 2.0 Flash</option>
+                        </select>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Upload Section -->
+            <section class="upload-section">
+                <h2>Upload Files</h2>
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-content">
+                        <div class="upload-icon">📁</div>
+                        <p>Drag & drop gambar atau PDF di sini</p>
+                        <p class="upload-info">Mendukung JPG, PNG, WebP, PDF (maksimal 50MB)</p>
+                        <button class="upload-button">Pilih File</button>
+                        <input type="file" id="fileInput" multiple accept=".jpg,.jpeg,.png,.webp,.pdf" hidden>
+                        
+                        <div class="paste-section">
+                            <div class="paste-divider">atau</div>
+                            <div class="paste-area" id="pasteArea">
+                                <div class="paste-icon">📋</div>
+                                <h4>Paste Gambar dari Clipboard</h4>
+                                <p class="paste-info">Ctrl+V untuk paste gambar yang sudah di-copy</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="uploadStatus" class="status-message"></div>
+            </section>
+
+            <!-- Progress Section -->
+            <section class="progress-section" id="progressSection" style="display: none;">
+                <h2>Processing Progress</h2>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div id="progressText">0%</div>
+            </section>
+
+            <!-- Debug Console Section -->
+            <section class="debug-section" id="debugSection" style="display: none;">
+                <div class="debug-header">
+                    <h2>🔍 Debug Console</h2>
+                    <button id="debugToggle" class="debug-toggle">Hide Debug</button>
+                </div>
+                <div class="debug-console" id="debugConsole">
+                    <div class="debug-content" id="debugContent"></div>
+                </div>
+            </section>
+
+            <!-- Results Section -->
+            <section class="results-section" id="resultsSection" style="display: none;">
+                <h2>Generated Prompts</h2>
+                
+                <!-- Export Section -->
+                <div class="export-section" id="exportSection" style="display: none;">
+                    <div class="export-header">
+                        <h3>📥 Export Prompts</h3>
+                    </div>
+                    <div class="export-buttons">
+                        <button id="copyAllImagePrompts" class="export-btn">
+                            🖼️ Copy All Image Prompts
+                        </button>
+                        <button id="copyAllVideoPrompts" class="export-btn">
+                            🎬 Copy All Video Prompts
+                        </button>
+                        <button id="downloadImagePrompts" class="export-btn secondary">
+                            💾 Download Image Prompts (TXT)
+                        </button>
+                        <button id="downloadVideoPrompts" class="export-btn secondary">
+                            💾 Download Video Prompts (TXT)
+                        </button>
+                        <button id="downloadAllPrompts" class="export-btn secondary">
+                            💾 Download All (Complete File)
+                        </button>
+                    </div>
+                    <div class="export-stats" id="exportStats">
+                        <h4>📊 Export Statistics</h4>
+                        <p id="exportStatsContent">Ready to export prompts...</p>
+                    </div>
+                </div>
+                
+                <div id="resultsContainer"></div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+        <div class="loading-container">
+            <div class="loading-spinner"></div>
+            <div class="loading-text" id="loadingText">
+                Menganalisis file<span class="loading-dots"></span>
+            </div>
+            <div class="loading-subtext" id="loadingSubtext">
+                Mohon tunggu, AI sedang memproses gambar Anda
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Donation Button -->
+    <div class="floating-donation" id="floatingDonation">
+        <a href="https://trakteer.id/anton-prafanto-nszpm/tip" target="_blank" class="floating-btn">
+            <span class="donation-icon">☕</span>
+            <span class="donation-text">Dukung Developer</span>
+        </a>
+    </div>
+
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <script src="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+    <script src="src/js/app.js"></script>
+</body>
+</html>
