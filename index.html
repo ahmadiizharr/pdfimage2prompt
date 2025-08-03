@@ -112,6 +112,7 @@
                 <div class="api-tabs">
                     <button class="api-tab active" data-provider="openai">OpenAI</button>
                     <button class="api-tab" data-provider="gemini">Google Gemini</button>
+                    <button class="api-tab" data-provider="openrouter">OpenRouter</button>
                 </div>
                 
                 <div class="api-panel active" id="openaiPanel">
@@ -129,6 +130,23 @@
                     </div>
                     <div id="geminiStatus" class="status-message"></div>
                     <p class="api-info">💡 Untuk mendapatkan Gemini API Key, kunjungi: <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a></p>
+                </div>
+                
+                <div class="api-panel" id="openrouterPanel">
+                    <div class="api-input-group">
+                        <input type="password" id="openrouterApiKey" placeholder="Masukkan OpenRouter API Key" />
+                        <button id="validateOpenrouterKey">Validate OpenRouter</button>
+                    </div>
+                    <div id="openrouterStatus" class="status-message"></div>
+                    <p class="api-info">💡 Untuk mendapatkan OpenRouter API Key, kunjungi: <a href="https://openrouter.ai/keys" target="_blank">OpenRouter API Keys</a></p>
+                    <div class="model-selector">
+                        <label for="openrouterModel">Model:</label>
+                        <select id="openrouterModel">
+                            <option value="google/gemini-flash-1.5">Gemini Flash 1.5 (Recommended)</option>
+                            <option value="google/gemini-2.5-flash">Gemini 2.5 Flash</option>
+                            <option value="google/gemini-2.0-flash-001">Gemini 2.0 Flash</option>
+                        </select>
+                    </div>
                 </div>
             </section>
 
@@ -192,8 +210,14 @@
                         <button id="copyAllVideoPrompts" class="export-btn">
                             🎬 Copy All Video Prompts
                         </button>
+                        <button id="downloadImagePrompts" class="export-btn secondary">
+                            💾 Download Image Prompts (TXT)
+                        </button>
+                        <button id="downloadVideoPrompts" class="export-btn secondary">
+                            💾 Download Video Prompts (TXT)
+                        </button>
                         <button id="downloadAllPrompts" class="export-btn secondary">
-                            💾 Download as Text File
+                            💾 Download All (Complete File)
                         </button>
                     </div>
                     <div class="export-stats" id="exportStats">

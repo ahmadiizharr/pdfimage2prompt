@@ -3,6 +3,8 @@ const AppState = {
     apiProvider: localStorage.getItem('api_provider') || 'openai',
     openaiApiKey: localStorage.getItem('openai_api_key') || '',
     geminiApiKey: localStorage.getItem('gemini_api_key') || '',
+    openrouterApiKey: localStorage.getItem('openrouter_api_key') || '',
+    openrouterModel: localStorage.getItem('openrouter_model') || 'google/gemini-flash-1.5',
     isApiKeyValid: false,
     uploadedFiles: [],
     processedImages: [],
@@ -14,10 +16,14 @@ const elements = {
     // API Elements
     openaiApiKey: document.getElementById('openaiApiKey'),
     geminiApiKey: document.getElementById('geminiApiKey'),
+    openrouterApiKey: document.getElementById('openrouterApiKey'),
+    openrouterModel: document.getElementById('openrouterModel'),
     validateOpenaiKey: document.getElementById('validateOpenaiKey'),
     validateGeminiKey: document.getElementById('validateGeminiKey'),
+    validateOpenrouterKey: document.getElementById('validateOpenrouterKey'),
     openaiStatus: document.getElementById('openaiStatus'),
     geminiStatus: document.getElementById('geminiStatus'),
+    openrouterStatus: document.getElementById('openrouterStatus'),
     uploadArea: document.getElementById('uploadArea'),
     fileInput: document.getElementById('fileInput'),
     pasteArea: document.getElementById('pasteArea'),
@@ -38,6 +44,8 @@ const elements = {
     exportStatsContent: document.getElementById('exportStatsContent'),
     copyAllImagePrompts: document.getElementById('copyAllImagePrompts'),
     copyAllVideoPrompts: document.getElementById('copyAllVideoPrompts'),
+    downloadImagePrompts: document.getElementById('downloadImagePrompts'),
+    downloadVideoPrompts: document.getElementById('downloadVideoPrompts'),
     downloadAllPrompts: document.getElementById('downloadAllPrompts'),
     floatingDonation: document.getElementById('floatingDonation'),
     guideSection: document.getElementById('guideSection'),
@@ -141,6 +149,16 @@ function initializeApp() {
     if (AppState.geminiApiKey) {
         elements.geminiApiKey.value = AppState.geminiApiKey;
         showStatus(elements.geminiStatus, 'Gemini API Key tersimpan di browser', 'info');
+    }
+    
+    if (AppState.openrouterApiKey) {
+        elements.openrouterApiKey.value = AppState.openrouterApiKey;
+        showStatus(elements.openrouterStatus, 'OpenRouter API Key tersimpan di browser', 'info');
+    }
+    
+    // Load saved OpenRouter model
+    if (AppState.openrouterModel && elements.openrouterModel) {
+        elements.openrouterModel.value = AppState.openrouterModel;
     }
     
     // Setup API tabs
@@ -283,10 +301,19 @@ function setupExportFeatures() {
         copyPromptsToClipboard('video', event);
     });
 
+    // Download Image Prompts Only
+    elements.downloadImagePrompts.addEventListener('click', function() {
+        downloadPromptsAsFile('image');
+    });
+
+    // Download Video Prompts Only
+    elements.downloadVideoPrompts.addEventListener('click', function() {
+        downloadPromptsAsFile('video');
+    });
 
     // Download All Prompts
     elements.downloadAllPrompts.addEventListener('click', function() {
-        downloadPromptsAsFile();
+        downloadPromptsAsFile('complete');
     });
 
     // Guide Section Toggle
@@ -306,6 +333,36 @@ function setupExportFeatures() {
     }
 }
 
+function getAllVariantPrompts(type) {
+    const variants = [];
+    
+    try {
+        const variantContainers = document.querySelectorAll('.variants-container');
+        
+        variantContainers.forEach(container => {
+            const promptSection = container.closest('.prompt-section');
+            if (!promptSection) return;
+            
+            const isImageSection = promptSection.querySelector('.image-prompt');
+            const isVideoSection = promptSection.querySelector('.video-prompt');
+            
+            // Check if this container matches the requested type
+            if ((type === 'image' && isImageSection) || (type === 'video' && isVideoSection) || type === 'both') {
+                const variantItems = container.querySelectorAll('.variant-item .prompt-text');
+                variantItems.forEach(item => {
+                    if (item && item.textContent) {
+                        variants.push(item.textContent.trim());
+                    }
+                });
+            }
+        });
+    } catch (error) {
+        console.error('Error in getAllVariantPrompts:', error);
+    }
+    
+    return variants;
+}
+
 function copyPromptsToClipboard(type, event) {
     if (AppState.processedImages.length === 0) {
         alert('Tidak ada prompt untuk disalin!');
@@ -315,6 +372,7 @@ function copyPromptsToClipboard(type, event) {
     let content = '';
     let count = 0;
 
+    // Add original prompts
     AppState.processedImages.forEach((result, index) => {
         if (type === 'image' || type === 'both') {
             content += `${result.imagePrompt}\n\n`;
@@ -326,6 +384,24 @@ function copyPromptsToClipboard(type, event) {
             count++;
         }
     });
+    
+    // Add variant prompts
+    const imageVariants = getAllVariantPrompts('image');
+    const videoVariants = getAllVariantPrompts('video');
+    
+    if (type === 'image' || type === 'both') {
+        imageVariants.forEach(variant => {
+            content += `${variant}\n\n`;
+            count++;
+        });
+    }
+    
+    if (type === 'video' || type === 'both') {
+        videoVariants.forEach(variant => {
+            content += `${variant}\n\n`;
+            count++;
+        });
+    }
 
     navigator.clipboard.writeText(content).then(() => {
         // Show success feedback
@@ -339,55 +415,126 @@ function copyPromptsToClipboard(type, event) {
             button.style.background = '';
         }, 2000);
         
-        successLog(`📋 ${type.charAt(0).toUpperCase() + type.slice(1)} prompts copied to clipboard`);
+        const variantInfo = imageVariants.length + videoVariants.length > 0 ? ` (including ${imageVariants.length + videoVariants.length} variants)` : '';
+        successLog(`📋 ${type.charAt(0).toUpperCase() + type.slice(1)} prompts copied to clipboard${variantInfo}`);
     }).catch(err => {
         console.error('Failed to copy to clipboard:', err);
         alert('Gagal menyalin ke clipboard. Silakan coba lagi.');
     });
 }
 
-function downloadPromptsAsFile() {
+function downloadPromptsAsFile(type = 'complete') {
     if (AppState.processedImages.length === 0) {
         alert('Tidak ada prompt untuk diunduh!');
         return;
     }
 
     let content = '';
-    const timestamp = new Date().toLocaleString();
+    let filename = '';
+    const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
     
-    // Header
-    content += `PDF IMAGE TO PROMPT - COMPLETE EXPORT\n`;
-    content += `Generated on: ${timestamp}\n`;
-    content += `Total processed images: ${AppState.processedImages.length}\n`;
-    content += `${'='.repeat(80)}\n\n`;
+    // Get variant prompts
+    const imageVariants = getAllVariantPrompts('image');
+    const videoVariants = getAllVariantPrompts('video');
+    
+    if (type === 'image') {
+        // Simple newline-separated image prompts
+        AppState.processedImages.forEach((result, index) => {
+            content += result.imagePrompt + '\n';
+        });
+        
+        // Add image variants
+        imageVariants.forEach(variant => {
+            content += variant + '\n';
+        });
+        
+        filename = `image_prompts_${timestamp}.txt`;
+        const totalCount = AppState.processedImages.length + imageVariants.length;
+        const variantInfo = imageVariants.length > 0 ? ` (including ${imageVariants.length} variants)` : '';
+        successLog(`💾 Downloaded ${totalCount} image prompts${variantInfo}`);
+        
+    } else if (type === 'video') {
+        // Simple newline-separated video prompts
+        AppState.processedImages.forEach((result, index) => {
+            content += result.videoPrompt + '\n';
+        });
+        
+        // Add video variants
+        videoVariants.forEach(variant => {
+            content += variant + '\n';
+        });
+        
+        filename = `video_prompts_${timestamp}.txt`;
+        const totalCount = AppState.processedImages.length + videoVariants.length;
+        const variantInfo = videoVariants.length > 0 ? ` (including ${videoVariants.length} variants)` : '';
+        successLog(`💾 Downloaded ${totalCount} video prompts${variantInfo}`);
+        
+    } else {
+        // Complete detailed export (original format)
+        const fullTimestamp = new Date().toLocaleString();
+        
+        // Header
+        content += `PDF IMAGE TO PROMPT - COMPLETE EXPORT\n`;
+        content += `Generated on: ${fullTimestamp}\n`;
+        content += `Total processed images: ${AppState.processedImages.length}\n`;
+        content += `Total image variants: ${imageVariants.length}\n`;
+        content += `Total video variants: ${videoVariants.length}\n`;
+        content += `${'='.repeat(80)}\n\n`;
 
-    // Content
-    AppState.processedImages.forEach((result, index) => {
-        const itemTitle = getResultTitle(result, index);
+        // Content
+        AppState.processedImages.forEach((result, index) => {
+            const itemTitle = getResultTitle(result, index);
+            
+            content += `${'-'.repeat(60)}\n`;
+            content += `${itemTitle}\n`;
+            content += `${'-'.repeat(60)}\n\n`;
+            
+            content += `DESCRIPTION:\n${result.description}\n\n`;
+            
+            content += `IMAGE GENERATION PROMPT:\n${result.imagePrompt}\n\n`;
+            
+            content += `VIDEO GENERATION PROMPT:\n${result.videoPrompt}\n\n`;
+        });
         
-        content += `${'-'.repeat(60)}\n`;
-        content += `${itemTitle}\n`;
-        content += `${'-'.repeat(60)}\n\n`;
+        // Add variants section if any exist
+        if (imageVariants.length > 0 || videoVariants.length > 0) {
+            content += `${'='.repeat(80)}\n`;
+            content += `GENERATED VARIANTS\n`;
+            content += `${'='.repeat(80)}\n\n`;
+            
+            if (imageVariants.length > 0) {
+                content += `IMAGE PROMPT VARIANTS (${imageVariants.length}):\n`;
+                content += `${'-'.repeat(40)}\n`;
+                imageVariants.forEach((variant, index) => {
+                    content += `${index + 1}. ${variant}\n\n`;
+                });
+            }
+            
+            if (videoVariants.length > 0) {
+                content += `VIDEO PROMPT VARIANTS (${videoVariants.length}):\n`;
+                content += `${'-'.repeat(40)}\n`;
+                videoVariants.forEach((variant, index) => {
+                    content += `${index + 1}. ${variant}\n\n`;
+                });
+            }
+        }
         
-        content += `DESCRIPTION:\n${result.description}\n\n`;
-        
-        content += `IMAGE GENERATION PROMPT:\n${result.imagePrompt}\n\n`;
-        
-        content += `VIDEO GENERATION PROMPT:\n${result.videoPrompt}\n\n`;
-    });
+        filename = `complete_prompts_${timestamp}.txt`;
+        const totalVariants = imageVariants.length + videoVariants.length;
+        const variantInfo = totalVariants > 0 ? ` and ${totalVariants} variants` : '';
+        successLog(`💾 Downloaded complete export with ${AppState.processedImages.length} results${variantInfo}`);
+    }
 
     // Create and download file
     const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `prompts_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.txt`;
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-
-    successLog('💾 Prompts downloaded as text file');
 }
 
 function toggleGuideSection() {
@@ -421,15 +568,38 @@ function getResultTitle(result, index) {
 }
 
 function updateExportStats() {
+    // Check if elements.exportStatsContent exists before updating
+    if (!elements.exportStatsContent) {
+        return;
+    }
+    
     const imagePromptCount = AppState.processedImages.length;
     const videoPromptCount = AppState.processedImages.length;
-    const totalPrompts = imagePromptCount + videoPromptCount;
+    
+    // Get variant counts safely
+    let imageVariants = [];
+    let videoVariants = [];
+    
+    try {
+        imageVariants = getAllVariantPrompts('image');
+        videoVariants = getAllVariantPrompts('video');
+    } catch (error) {
+        console.warn('Error getting variant prompts:', error);
+    }
+    
+    const totalOriginalPrompts = imagePromptCount + videoPromptCount;
+    const totalVariants = imageVariants.length + videoVariants.length;
+    const grandTotal = totalOriginalPrompts + totalVariants;
 
     elements.exportStatsContent.innerHTML = `
         📊 <strong>${AppState.processedImages.length}</strong> images processed<br>
-        🖼️ <strong>${imagePromptCount}</strong> image prompts available<br>
-        🎬 <strong>${videoPromptCount}</strong> video prompts available<br>
-        📋 <strong>${totalPrompts}</strong> total prompts ready for export
+        🖼️ <strong>${imagePromptCount}</strong> image prompts + <strong>${imageVariants.length}</strong> variants<br>
+        🎬 <strong>${videoPromptCount}</strong> video prompts + <strong>${videoVariants.length}</strong> variants<br>
+        📋 <strong>${grandTotal}</strong> total prompts ready for export<br><br>
+        💡 <strong>Export Options:</strong><br>
+        • Individual TXT files with simple newline format<br>
+        • Complete detailed export with descriptions<br>
+        • All exports now include generated variants
     `;
 }
 
@@ -448,6 +618,21 @@ function setupEventListeners() {
         if (e.key === 'Enter') {
             validateApiKey('gemini');
         }
+    });
+    
+    // API Key Events - OpenRouter
+    elements.validateOpenrouterKey.addEventListener('click', () => validateApiKey('openrouter'));
+    elements.openrouterApiKey.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            validateApiKey('openrouter');
+        }
+    });
+    
+    // OpenRouter Model Selection
+    elements.openrouterModel.addEventListener('change', function() {
+        AppState.openrouterModel = this.value;
+        localStorage.setItem('openrouter_model', this.value);
+        debugLog(`🔄 OpenRouter model changed to: ${this.value}`);
     });
 
     // Upload Events
@@ -581,10 +766,28 @@ function processFiles(files) {
 }
 
 async function validateApiKey(provider) {
-    const isOpenAI = provider === 'openai';
-    const apiKeyElement = isOpenAI ? elements.openaiApiKey : elements.geminiApiKey;
-    const statusElement = isOpenAI ? elements.openaiStatus : elements.geminiStatus;
-    const buttonElement = isOpenAI ? elements.validateOpenaiKey : elements.validateGeminiKey;
+    let apiKeyElement, statusElement, buttonElement;
+    
+    switch (provider) {
+        case 'openai':
+            apiKeyElement = elements.openaiApiKey;
+            statusElement = elements.openaiStatus;
+            buttonElement = elements.validateOpenaiKey;
+            break;
+        case 'gemini':
+            apiKeyElement = elements.geminiApiKey;
+            statusElement = elements.geminiStatus;
+            buttonElement = elements.validateGeminiKey;
+            break;
+        case 'openrouter':
+            apiKeyElement = elements.openrouterApiKey;
+            statusElement = elements.openrouterStatus;
+            buttonElement = elements.validateOpenrouterKey;
+            break;
+        default:
+            console.error('Unknown provider:', provider);
+            return;
+    }
     
     const apiKey = apiKeyElement.value.trim();
     
@@ -599,7 +802,7 @@ async function validateApiKey(provider) {
     try {
         let response;
         
-        if (isOpenAI) {
+        if (provider === 'openai') {
             response = await fetch('https://api.openai.com/v1/models', {
                 method: 'GET',
                 headers: {
@@ -607,7 +810,7 @@ async function validateApiKey(provider) {
                     'Content-Type': 'application/json'
                 }
             });
-        } else {
+        } else if (provider === 'gemini') {
             // Gemini API validation
             response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`, {
                 method: 'GET',
@@ -615,19 +818,33 @@ async function validateApiKey(provider) {
                     'Content-Type': 'application/json'
                 }
             });
+        } else if (provider === 'openrouter') {
+            // OpenRouter API validation
+            response = await fetch('https://openrouter.ai/api/v1/models', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json'
+                }
+            });
         }
 
         if (response.ok) {
-            if (isOpenAI) {
+            if (provider === 'openai') {
                 AppState.openaiApiKey = apiKey;
                 localStorage.setItem('openai_api_key', apiKey);
                 showStatus(statusElement, 'OpenAI API Key valid! Siap untuk memproses gambar', 'success');
                 debugLog('✅ OpenAI API Key validated successfully');
-            } else {
+            } else if (provider === 'gemini') {
                 AppState.geminiApiKey = apiKey;
                 localStorage.setItem('gemini_api_key', apiKey);
                 showStatus(statusElement, 'Gemini API Key valid! Siap untuk memproses gambar', 'success');
                 debugLog('✅ Gemini API Key validated successfully');
+            } else if (provider === 'openrouter') {
+                AppState.openrouterApiKey = apiKey;
+                localStorage.setItem('openrouter_api_key', apiKey);
+                showStatus(statusElement, 'OpenRouter API Key valid! Siap untuk memproses gambar', 'success');
+                debugLog('✅ OpenRouter API Key validated successfully');
             }
             
             // Update global validation state if current provider is validated
@@ -647,13 +864,27 @@ async function validateApiKey(provider) {
         }
     } finally {
         buttonElement.disabled = false;
-        buttonElement.textContent = isOpenAI ? 'Validate OpenAI' : 'Validate Gemini';
+        const buttonTexts = {
+            'openai': 'Validate OpenAI',
+            'gemini': 'Validate Gemini',
+            'openrouter': 'Validate OpenRouter'
+        };
+        buttonElement.textContent = buttonTexts[provider];
     }
 }
 
 // Helper function to get current API key
 function getCurrentApiKey() {
-    return AppState.apiProvider === 'openai' ? AppState.openaiApiKey : AppState.geminiApiKey;
+    switch (AppState.apiProvider) {
+        case 'openai':
+            return AppState.openaiApiKey;
+        case 'gemini':
+            return AppState.geminiApiKey;
+        case 'openrouter':
+            return AppState.openrouterApiKey;
+        default:
+            return '';
+    }
 }
 
 // Helper function to check if current provider is validated
@@ -668,8 +899,12 @@ async function callVisionAPI(imageData, promptText, maxTokens = 1000) {
     
     if (AppState.apiProvider === 'openai') {
         return await callOpenAIAPI(imageData, promptText, maxTokens, apiKey);
-    } else {
+    } else if (AppState.apiProvider === 'gemini') {
         return await callGeminiAPI(imageData, promptText, maxTokens, apiKey);
+    } else if (AppState.apiProvider === 'openrouter') {
+        return await callOpenRouterAPI(imageData, promptText, maxTokens, apiKey);
+    } else {
+        throw new Error('Invalid API provider');
     }
 }
 
@@ -742,14 +977,49 @@ async function callGeminiAPI(imageData, promptText, maxTokens, apiKey) {
     return data.candidates[0].content.parts[0].text;
 }
 
-// Generic text-only API call function that supports both OpenAI and Gemini
+// OpenRouter API call
+async function callOpenRouterAPI(imageData, promptText, maxTokens, apiKey) {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            model: AppState.openrouterModel,
+            messages: [{
+                role: "user",
+                content: [
+                    { type: "text", text: promptText },
+                    { type: "image_url", image_url: { url: imageData } }
+                ]
+            }],
+            max_tokens: maxTokens,
+            temperature: 0.7
+        })
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`OpenRouter API Error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+    }
+
+    const data = await response.json();
+    return data.choices[0].message.content;
+}
+
+// Generic text-only API call function that supports OpenAI, Gemini, and OpenRouter
 async function callTextAPI(promptText, maxTokens = 1000, temperature = 0.7) {
     const apiKey = getCurrentApiKey();
     
     if (AppState.apiProvider === 'openai') {
         return await callOpenAITextAPI(promptText, maxTokens, temperature, apiKey);
-    } else {
+    } else if (AppState.apiProvider === 'gemini') {
         return await callGeminiTextAPI(promptText, maxTokens, temperature, apiKey);
+    } else if (AppState.apiProvider === 'openrouter') {
+        return await callOpenRouterTextAPI(promptText, maxTokens, temperature, apiKey);
+    } else {
+        throw new Error('Invalid API provider');
     }
 }
 
@@ -808,6 +1078,34 @@ async function callGeminiTextAPI(promptText, maxTokens, temperature, apiKey) {
     return data.candidates[0].content.parts[0].text;
 }
 
+// OpenRouter text-only API call
+async function callOpenRouterTextAPI(promptText, maxTokens, temperature, apiKey) {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            model: AppState.openrouterModel,
+            messages: [{
+                role: "user",
+                content: promptText
+            }],
+            max_tokens: maxTokens,
+            temperature: temperature
+        })
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`OpenRouter API Error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+    }
+
+    const data = await response.json();
+    return data.choices[0].message.content;
+}
+
 async function startProcessing() {
     AppState.isProcessing = true;
     elements.progressSection.style.display = 'block';
@@ -826,7 +1124,7 @@ async function startProcessing() {
     });
     
     try {
-        await processFilesWithOpenAI();
+        await processFilesWithAI();
         successLog('✅ File processing completed successfully');
         hideLoading();
     } catch (error) {
@@ -891,7 +1189,7 @@ function updateDetailedProgress(increment = 0, operation = '') {
     });
 }
 
-async function processFilesWithOpenAI() {
+async function processFilesWithAI() {
     const results = [];
     initializeProgress(AppState.uploadedFiles);
     
@@ -1672,16 +1970,45 @@ function createResultElement(result, index) {
             <h4>🎨 Prompt untuk Image Generation</h4>
             <p class="prompt-subtitle">Gunakan prompt ini untuk DALL-E, Midjourney, atau Stable Diffusion:</p>
             <div class="prompt-text image-prompt">${result.imagePrompt}</div>
-            <button class="copy-button" onclick="copyToClipboard('${escapeQuotes(result.imagePrompt)}', this)">Copy Image Prompt</button>
+            <div class="prompt-actions">
+                <button class="copy-button" onclick="copyToClipboard('${escapeQuotes(result.imagePrompt)}', this)">Copy Image Prompt</button>
+                <div class="variant-controls">
+                    <input type="number" class="variant-count" min="1" max="5" value="1" placeholder="Jumlah">
+                    <button class="variant-button" data-prompt-type="image" data-result-index="${index}">🔄 New Variant</button>
+                </div>
+            </div>
+            <div class="variants-container" id="image-variants-${index}"></div>
         </div>
         
         <div class="prompt-section">
             <h4>🎬 Prompt untuk Video Generation</h4>
             <p class="prompt-subtitle">Gunakan prompt ini untuk Runway, Pika Labs, atau AI video generator lainnya:</p>
             <div class="prompt-text video-prompt">${result.videoPrompt}</div>
-            <button class="copy-button" onclick="copyToClipboard('${escapeQuotes(result.videoPrompt)}', this)">Copy Video Prompt</button>
+            <div class="prompt-actions">
+                <button class="copy-button" onclick="copyToClipboard('${escapeQuotes(result.videoPrompt)}', this)">Copy Video Prompt</button>
+                <div class="variant-controls">
+                    <input type="number" class="variant-count" min="1" max="5" value="1" placeholder="Jumlah">
+                    <button class="variant-button" data-prompt-type="video" data-result-index="${index}">🔄 New Variant</button>
+                </div>
+            </div>
+            <div class="variants-container" id="video-variants-${index}"></div>
         </div>
     `;
+    
+    // Store the original prompts as data attributes for safe access
+    div.dataset.imagePrompt = result.imagePrompt;
+    div.dataset.videoPrompt = result.videoPrompt;
+    
+    // Add event listeners for variant buttons
+    const variantButtons = div.querySelectorAll('.variant-button');
+    variantButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const promptType = this.dataset.promptType;
+            const resultIndex = this.dataset.resultIndex;
+            const originalPrompt = promptType === 'image' ? div.dataset.imagePrompt : div.dataset.videoPrompt;
+            generateVariant(originalPrompt, promptType, this);
+        });
+    });
     
     return div;
 }
@@ -1699,6 +2026,135 @@ function copyToClipboard(text, button) {
     }).catch(err => {
         console.error('Failed to copy: ', err);
     });
+}
+
+async function generateVariant(originalPrompt, promptType, button) {
+    // Check if API key is valid
+    if (!isCurrentProviderValid()) {
+        alert('Silakan validasi API key terlebih dahulu!');
+        return;
+    }
+    
+    // Get variant count from input
+    const variantCountInput = button.parentElement.querySelector('.variant-count');
+    const variantCount = parseInt(variantCountInput.value) || 1;
+    
+    if (variantCount < 1 || variantCount > 5) {
+        alert('Jumlah variant harus antara 1-5!');
+        return;
+    }
+    
+    // Show loading state
+    const originalText = button.textContent;
+    button.textContent = '⏳ Generating...';
+    button.disabled = true;
+    
+    try {
+        // Find the variants container
+        const promptSection = button.closest('.prompt-section');
+        const variantsContainer = promptSection.querySelector('.variants-container');
+        
+        // Generate variants using AI
+        const variants = await generatePromptVariants(originalPrompt, promptType, variantCount);
+        
+        // Display variants
+        displayVariants(variants, variantsContainer, promptType);
+        
+        successLog(`✅ Generated ${variants.length} ${promptType} prompt variants`);
+        
+    } catch (error) {
+        console.error('Error generating variants:', error);
+        alert('Gagal generate variant. Silakan coba lagi.');
+    } finally {
+        // Reset button state
+        button.textContent = originalText;
+        button.disabled = false;
+    }
+}
+
+async function generatePromptVariants(originalPrompt, promptType, count) {
+    const systemPrompt = `You are an expert AI prompt engineer. Your task is to create ${count} creative variants of the given ${promptType} generation prompt.
+
+Rules:
+1. Each variant should maintain the core concept and visual elements of the original prompt
+2. Vary the style, composition, mood, or artistic approach
+3. Keep variants specific and detailed for optimal AI generation results
+4. For image prompts: focus on different artistic styles, compositions, or visual treatments
+5. For video prompts: focus on different camera movements, transitions, or animation styles
+6. Each variant should be unique and creative while staying true to the original concept
+7. Return ONLY a JSON array of strings, no additional text
+
+Original ${promptType} prompt: "${originalPrompt}"
+
+Generate ${count} creative variants:`;
+
+    const response = await callTextAPI(systemPrompt, 1500, 0.8);
+    
+    try {
+        // Try to parse as JSON array
+        const variants = JSON.parse(response);
+        if (Array.isArray(variants)) {
+            return variants;
+        }
+    } catch (e) {
+        // If JSON parsing fails, try to extract variants from text
+        const lines = response.split('\n').filter(line => line.trim());
+        const variants = [];
+        
+        for (const line of lines) {
+            const cleaned = line.replace(/^\d+\.\s*/, '').replace(/^"-*/, '').replace(/"$/, '').trim();
+            if (cleaned && cleaned.length > 20) {
+                variants.push(cleaned);
+            }
+        }
+        
+        if (variants.length > 0) {
+            return variants.slice(0, count);
+        }
+    }
+    
+    // Fallback: return original prompt with slight modifications
+    return [originalPrompt + ' with enhanced details and improved composition'];
+}
+
+function displayVariants(variants, container, promptType) {
+    container.innerHTML = '';
+    
+    if (variants.length === 0) {
+        container.innerHTML = '<p class="no-variants">Tidak ada variant yang berhasil dibuat.</p>';
+        return;
+    }
+    
+    const variantsHeader = document.createElement('div');
+    variantsHeader.className = 'variants-header';
+    variantsHeader.innerHTML = `<h5>🎲 Generated Variants (${variants.length})</h5>`;
+    container.appendChild(variantsHeader);
+    
+    variants.forEach((variant, index) => {
+        const variantDiv = document.createElement('div');
+        variantDiv.className = 'variant-item';
+        
+        const promptClass = promptType === 'image' ? 'image-prompt' : 'video-prompt';
+        
+        variantDiv.innerHTML = `
+            <div class="variant-header">
+                <span class="variant-number">Variant ${index + 1}</span>
+            </div>
+            <div class="prompt-text ${promptClass}">${variant}</div>
+            <button class="copy-button variant-copy">Copy Variant</button>
+        `;
+        
+        // Add event listener for copy button
+        const copyButton = variantDiv.querySelector('.variant-copy');
+        copyButton.addEventListener('click', function() {
+            copyToClipboard(variant, this);
+        });
+        
+        container.appendChild(variantDiv);
+    });
+    
+    // Update export stats to reflect new variants
+    updateExportStats();
 }
 
 
