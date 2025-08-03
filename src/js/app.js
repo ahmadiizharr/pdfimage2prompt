@@ -1973,7 +1973,7 @@ function createResultElement(result, index) {
             <div class="prompt-actions">
                 <button class="copy-button" onclick="copyToClipboard('${escapeQuotes(result.imagePrompt)}', this)">Copy Image Prompt</button>
                 <div class="variant-controls">
-                    <input type="number" class="variant-count" min="1" max="5" value="1" placeholder="Jumlah">
+                    <input type="number" class="variant-count" min="1" max="20" value="1" placeholder="Jumlah">
                     <button class="variant-button" data-prompt-type="image" data-result-index="${index}">🔄 New Variant</button>
                 </div>
             </div>
@@ -1987,7 +1987,7 @@ function createResultElement(result, index) {
             <div class="prompt-actions">
                 <button class="copy-button" onclick="copyToClipboard('${escapeQuotes(result.videoPrompt)}', this)">Copy Video Prompt</button>
                 <div class="variant-controls">
-                    <input type="number" class="variant-count" min="1" max="5" value="1" placeholder="Jumlah">
+                    <input type="number" class="variant-count" min="1" max="20" value="1" placeholder="Jumlah">
                     <button class="variant-button" data-prompt-type="video" data-result-index="${index}">🔄 New Variant</button>
                 </div>
             </div>
@@ -2039,8 +2039,13 @@ async function generateVariant(originalPrompt, promptType, button) {
     const variantCountInput = button.parentElement.querySelector('.variant-count');
     const variantCount = parseInt(variantCountInput.value) || 1;
     
-    if (variantCount < 1 || variantCount > 5) {
-        alert('Jumlah variant harus antara 1-5!');
+    if (variantCount < 1) {
+        alert('Jumlah variant minimal 1!');
+        return;
+    }
+    
+    if (variantCount > 20) {
+        alert('Jumlah variant maksimal 20 untuk mencegah overload!');
         return;
     }
     
