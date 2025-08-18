@@ -170,6 +170,76 @@ section h2 {
     border-color: #3498db;
 }
 
+/* Prompt Style Section */
+.prompt-style-section {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+}
+
+.prompt-style-section h2 {
+    color: white;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.style-selector {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.style-selector label {
+    display: block;
+    font-weight: 500;
+    color: white;
+    margin-bottom: 10px;
+    font-size: 16px;
+}
+
+.style-dropdown {
+    width: 100%;
+    padding: 15px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-radius: 8px;
+    font-size: 16px;
+    background: rgba(255,255,255,0.1);
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+.style-dropdown:focus {
+    outline: none;
+    border-color: rgba(255,255,255,0.8);
+    background: rgba(255,255,255,0.2);
+}
+
+.style-dropdown option {
+    background: #2c3e50;
+    color: white;
+    padding: 10px;
+}
+
+.style-description {
+    margin-top: 15px;
+    padding: 15px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 8px;
+    border-left: 4px solid rgba(255,255,255,0.5);
+    backdrop-filter: blur(10px);
+}
+
+.style-description p {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.style-description strong {
+    color: #ffd700;
+}
+
 /* Upload Section */
 .upload-area {
     border: 3px dashed #bdc3c7;
