@@ -5,6 +5,7 @@ const AppState = {
     geminiApiKey: localStorage.getItem('gemini_api_key') || '',
     openrouterApiKey: localStorage.getItem('openrouter_api_key') || '',
     openrouterModel: localStorage.getItem('openrouter_model') || 'google/gemini-flash-1.5',
+    promptStyle: localStorage.getItem('prompt_style') || 'recreate',
     isApiKeyValid: false,
     uploadedFiles: [],
     processedImages: [],
@@ -48,6 +49,8 @@ const elements = {
     downloadVideoPrompts: document.getElementById('downloadVideoPrompts'),
     downloadAllPrompts: document.getElementById('downloadAllPrompts'),
     floatingDonation: document.getElementById('floatingDonation'),
+    promptStyle: document.getElementById('promptStyle'),
+    styleDescription: document.getElementById('styleDescription'),
     guideSection: document.getElementById('guideSection'),
     hideGuideBtn: document.getElementById('hideGuideBtn')
 };
@@ -553,6 +556,70 @@ function toggleGuideSection() {
     }
 }
 
+function updateStyleDescription(style) {
+    if (!elements.styleDescription) return;
+    
+    const descriptions = {
+        recreate: {
+            title: 'Recreate',
+            desc: 'Prompt akan mendeskripsikan gambar secara akurat untuk recreate yang mirip dengan aslinya. Cocok untuk referensi atau backup gambar.'
+        },
+        inspired: {
+            title: 'Inspired',
+            desc: 'Prompt akan mengambil elemen kunci dari gambar tapi dengan variasi kreatif. Menghasilkan gambar yang terinspirasi tapi unik dan berbeda dari aslinya.'
+        },
+        creative: {
+            title: 'Creative',
+            desc: 'Prompt akan menggunakan konsep dasar gambar untuk menciptakan sesuatu yang sangat berbeda dan kreatif. Hasil akan sangat unik dan tidak mirip dengan aslinya.'
+        }
+    };
+    
+    const styleInfo = descriptions[style] || descriptions.recreate;
+    elements.styleDescription.innerHTML = `
+        <p><strong>${styleInfo.title}:</strong> ${styleInfo.desc}</p>
+    `;
+}
+
+function generatePromptText(style = 'recreate') {
+    const baseAnalysis = "Analyze this image thoroughly and create detailed prompts for AI generation. Treat ALL images as potentially meaningful - including photographs, screenshots, UI interfaces, artwork, designs, and visual content.\n\nPlease provide:\n1) A comprehensive description of what you see (objects, people, interface elements, colors, composition, style, mood, lighting, etc.)";
+    
+    const styleInstructions = {
+        recreate: {
+            imagePrompt: "2) A detailed AI image generation prompt optimized for DALL-E, Midjourney, or Stable Diffusion that captures the essence and visual elements to RECREATE this image as accurately as possible",
+            videoPrompt: "3) A detailed AI video generation prompt for Runway or Pika Labs that could animate or create motion from this exact image",
+            approach: "RECREATE APPROACH: Focus on exact visual recreation. Be extremely detailed about colors, composition, lighting, objects, and style to recreate the image as closely as possible."
+        },
+        inspired: {
+            imagePrompt: "2) A detailed AI image generation prompt optimized for DALL-E, Midjourney, or Stable Diffusion that takes INSPIRATION from this image but creates something unique and different while maintaining the core concept",
+            videoPrompt: "3) A detailed AI video generation prompt for Runway or Pika Labs that creates a video inspired by this image but with creative variations and unique elements",
+            approach: "INSPIRED APPROACH: Use the main concept, mood, and key elements but add creative variations. Change colors, style, composition, or setting while keeping the core idea. Make it unique but recognizably inspired by the original."
+        },
+        creative: {
+            imagePrompt: "2) A detailed AI image generation prompt optimized for DALL-E, Midjourney, or Stable Diffusion that uses this image as a CREATIVE SPRINGBOARD to generate something completely different and artistic",
+            videoPrompt: "3) A detailed AI video generation prompt for Runway or Pika Labs that takes creative liberties with this image concept to create something entirely new and imaginative",
+            approach: "CREATIVE APPROACH: Use only the basic concept or mood as inspiration. Transform it into something completely different - different style, colors, composition, setting, or even genre. Be highly creative and artistic. The result should be unique and not resemble the original."
+        }
+    };
+    
+    const style_config = styleInstructions[style] || styleInstructions.recreate;
+    
+    return `${baseAnalysis}
+${style_config.imagePrompt}
+${style_config.videoPrompt}
+4) Mark as meaningful unless it's purely decorative icons or basic geometric shapes
+
+${style_config.approach}
+
+FOR SCREENSHOTS/UI: Describe the interface layout, colors, design elements, and create prompts that capture the visual design.
+FOR PHOTOS: Focus on subjects, composition, lighting, mood, and setting.
+FOR GRAPHICS/ARTWORK: Describe style, colors, elements, and artistic approach.
+
+IMPORTANT: Be very descriptive and specific in prompts. Include visual details, colors, composition, style, and mood.
+
+CRITICAL: Return ONLY valid JSON without markdown formatting. Use this exact structure:
+ {"description": "detailed description", "imagePrompt": "comprehensive prompt", "videoPrompt": "detailed video prompt", "isMeaningful": true/false}`;
+}
+
 function getResultTitle(result, index) {
     if (result.isIndividualImage) {
         if (result.pageNumber) {
@@ -633,6 +700,14 @@ function setupEventListeners() {
         AppState.openrouterModel = this.value;
         localStorage.setItem('openrouter_model', this.value);
         debugLog(`🔄 OpenRouter model changed to: ${this.value}`);
+    });
+
+    // Prompt Style Selection
+    elements.promptStyle.addEventListener('change', function() {
+        AppState.promptStyle = this.value;
+        localStorage.setItem('prompt_style', this.value);
+        updateStyleDescription(this.value);
+        debugLog(`🎨 Prompt style changed to: ${this.value}`);
     });
 
     // Upload Events
@@ -1381,7 +1456,7 @@ async function processImageFile(file) {
     
     const base64Image = await convertFileToBase64(file);
     
-    const promptText = "Analyze this image thoroughly and create detailed prompts for AI generation. Treat ALL images as potentially meaningful - including photographs, screenshots, UI interfaces, artwork, designs, and visual content.\n\nPlease provide:\n1) A comprehensive description of what you see (objects, people, interface elements, colors, composition, style, mood, lighting, etc.)\n2) A detailed AI image generation prompt optimized for DALL-E, Midjourney, or Stable Diffusion that captures the essence and visual elements\n3) A detailed AI video generation prompt for Runway or Pika Labs that could animate or create motion from this image\n4) Mark as meaningful unless it's purely decorative icons or basic geometric shapes\n\nFOR SCREENSHOTS/UI: Describe the interface layout, colors, design elements, and create prompts that capture the visual design.\nFOR PHOTOS: Focus on subjects, composition, lighting, mood, and setting.\nFOR GRAPHICS/ARTWORK: Describe style, colors, elements, and artistic approach.\n\nIMPORTANT: Be very descriptive and specific in prompts. Include visual details, colors, composition, style, and mood.\n\nCRITICAL: Return ONLY valid JSON without markdown formatting. Use this exact structure:\n{\"description\": \"detailed description\", \"imagePrompt\": \"comprehensive prompt\", \"videoPrompt\": \"detailed video prompt\", \"isMeaningful\": true/false}";
+    const promptText = generatePromptText(AppState.promptStyle);
     
     const imageDataUrl = `data:${file.type};base64,${base64Image}`;
     const content = await callVisionAPI(imageDataUrl, promptText, 1000);
@@ -1511,29 +1586,7 @@ async function processImageWithAPI(imageFile, pageNum) {
         
         const base64Image = await convertFileToBase64(imageFile);
         
-        const promptText = `Analyze this page from a PDF document in detail. Please provide:
-
-1) A comprehensive description of what you see (text content, images, diagrams, tables, layouts, visual elements, etc.)
-2) A detailed AI image generation prompt optimized for DALL-E, Midjourney, or Stable Diffusion that would recreate this exact page/visual content
-3) A detailed AI video generation prompt optimized for Runway or Pika Labs that would create a video based on this page content
-4) Determine if this page contains meaningful visual content (not just plain text or blank pages)
-
-IMPORTANT: Make the prompts very specific and detailed. For the image prompt, include:
-- Layout and composition details
-- Color schemes and typography
-- Specific visual elements, diagrams, or illustrations
-- Style and formatting details
-- Any visual hierarchy or design elements
-
-For the video prompt, describe:
-- How the content could be animated or presented
-- Transitions and visual effects
-- Camera movements or focus changes
-- Any dynamic elements that could be emphasized
-
-CRITICAL: Return ONLY valid JSON without any markdown formatting, explanations, or code blocks. Do not use backticks or code markers.
-
-Format your response as JSON with keys: description, imagePrompt, videoPrompt, isMeaningful`;
+        const promptText = generatePromptText(AppState.promptStyle);
 
         const imageDataUrl = `data:${imageFile.type};base64,${base64Image}`;
         const content = await callVisionAPI(imageDataUrl, promptText, 1200);
