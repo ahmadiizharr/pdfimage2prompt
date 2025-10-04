@@ -1019,7 +1019,7 @@ async function callGeminiAPI(imageData, promptText, maxTokens, apiKey) {
     const base64Data = imageData.split(',')[1];
     const mimeType = imageData.split(';')[0].split(':')[1];
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
